@@ -45,26 +45,26 @@ function LeaveHistoryPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/dashboard" className="text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-700">My Leaves</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <span className="hidden sm:inline text-sm font-medium text-gray-700">My Leaves</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600 transition">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
               {(role === 'MANAGER' || role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && (
-                <Link to="/leaves/approvals" className="text-sm text-indigo-600 hover:underline font-medium">
-                  Approval Queue →
+                <Link to="/leaves/approvals" className="text-xs sm:text-sm text-indigo-600 hover:underline font-medium">
+                  Approvals →
                 </Link>
               )}
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -74,18 +74,18 @@ function LeaveHistoryPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-8">
         {/* Header with Apply Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Leave Management</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Leave Management</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">
               Track your remaining balances and view past leave requests
             </p>
           </div>
           <button
             onClick={() => setShowApplyModal(true)}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition shadow-sm self-start sm:self-auto"
+            className="w-full sm:w-auto text-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs sm:text-sm transition shadow-sm"
           >
             + Apply for Leave
           </button>
@@ -99,7 +99,7 @@ function LeaveHistoryPage() {
 
         {/* Leave Balance Cards Grid */}
         <div>
-          <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider mb-4">
+          <h2 className="text-xs sm:text-sm font-bold text-gray-600 uppercase tracking-wider mb-3 sm:mb-4">
             Current Year Quota &amp; Balances ({new Date().getFullYear()})
           </h2>
           {loading ? (
@@ -109,7 +109,7 @@ function LeaveHistoryPage() {
               No leave balances found for current user account.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
               {balances.map((balance) => (
                 <LeaveBalanceCard key={balance.id} balance={balance} />
               ))}

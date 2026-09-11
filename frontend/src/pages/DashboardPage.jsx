@@ -57,21 +57,21 @@ function DashboardPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
                 P
               </span>
-              <h1 className="text-xl font-bold text-indigo-600">PayrollPro</h1>
-              <span className="text-sm text-gray-400">|</span>
-              <span className="text-sm text-gray-500">Executive Console</span>
+              <h1 className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</h1>
+              <span className="hidden sm:inline text-sm text-gray-400">|</span>
+              <span className="hidden sm:inline text-sm text-gray-500">Executive Console</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -81,15 +81,15 @@ function DashboardPage() {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
         {/* Onboarding Banner (Task 7.2) */}
         {showOnboarding && (
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-lg relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold uppercase tracking-wider mb-2">
                 🎉 Workspace Ready
               </div>
-              <h2 className="text-xl font-bold">Welcome to your new PayrollPro Workspace!</h2>
+              <h2 className="text-lg sm:text-xl font-bold">Welcome to your new PayrollPro Workspace!</h2>
               <p className="text-xs text-emerald-100 mt-1 max-w-2xl">
                 Default Indian statutory leave types (CL, SL, EL) are auto-configured. Next steps: 1) Add employees, 2) Log monthly attendance, 3) Run batch payroll.
               </p>
@@ -104,17 +104,17 @@ function DashboardPage() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold text-gray-900">Dashboard &amp; Payroll Analytics</h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">Dashboard &amp; Payroll Analytics</h2>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">
               Enterprise Overview • Real-time Headcount, Statutory Compliance, and Payout Metrics
             </p>
           </div>
           <div className="flex gap-2">
             <Link
               to="/payroll"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
+              className="w-full sm:w-auto text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
             >
               🚀 Run September Payroll
             </Link>
@@ -122,31 +122,31 @@ function DashboardPage() {
         </div>
 
         {/* 4 Quick Stat Cards (Task 7.3) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Headcount</div>
-            <div className="text-3xl font-extrabold text-gray-900 mt-2">{empCount}</div>
-            <div className="text-xs text-green-600 mt-1 font-medium">● 100% In System</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
+            <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Headcount</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1.5">{empCount}</div>
+            <div className="text-[11px] sm:text-xs text-green-600 mt-1 font-medium">● 100% In System</div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Employees</div>
-            <div className="text-3xl font-extrabold text-indigo-600 mt-2">{empCount}</div>
-            <div className="text-xs text-gray-500 mt-1">Eligible for payroll</div>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
+            <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Employees</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 mt-1.5">{empCount}</div>
+            <div className="text-[11px] sm:text-xs text-gray-500 mt-1">Eligible for payroll</div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Leaves</div>
-            <div className="text-3xl font-extrabold text-amber-600 mt-2">1</div>
-            <Link to="/leaves/approvals" className="text-xs text-amber-700 hover:underline mt-1 block">
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
+            <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Leaves</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1.5">1</div>
+            <Link to="/leaves/approvals" className="text-[11px] sm:text-xs text-amber-700 hover:underline mt-1 block">
               Review requests →
             </Link>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Exited / Separated</div>
-            <div className="text-3xl font-extrabold text-gray-400 mt-2">0</div>
-            <div className="text-xs text-gray-400 mt-1">0% Turnover rate</div>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
+            <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Exited / Separated</div>
+            <div className="text-2xl sm:text-3xl font-extrabold text-gray-400 mt-1.5">0</div>
+            <div className="text-[11px] sm:text-xs text-gray-400 mt-1">0% Turnover rate</div>
           </div>
         </div>
 

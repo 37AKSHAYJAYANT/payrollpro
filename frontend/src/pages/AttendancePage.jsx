@@ -127,24 +127,24 @@ function AttendancePage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/dashboard" className="text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-700">Attendance</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <span className="hidden sm:inline text-sm font-medium text-gray-700">Attendance</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600 transition">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
-              <Link to="/payroll" className="text-sm text-indigo-600 font-medium hover:underline">
-                Payroll Runs →
+              <Link to="/payroll" className="text-xs sm:text-sm text-indigo-600 font-medium hover:underline">
+                Payroll →
               </Link>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -154,18 +154,18 @@ function AttendancePage() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {/* Controls Bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex-1 sm:flex-initial">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                 Pay Cycle Month
               </label>
               <select
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value, 10))}
-                className="px-3.5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                className="w-full sm:w-auto px-3.5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
               >
                 {[
                   'January', 'February', 'March', 'April', 'May', 'June',
@@ -178,14 +178,14 @@ function AttendancePage() {
               </select>
             </div>
 
-            <div>
+            <div className="flex-1 sm:flex-initial">
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                 Year
               </label>
               <select
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value, 10))}
-                className="px-3.5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                className="w-full sm:w-auto px-3.5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
               >
                 <option value={2025}>2025</option>
                 <option value={2026}>2026</option>
@@ -195,16 +195,16 @@ function AttendancePage() {
           </div>
 
           {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
               <button
                 onClick={() => setShowManualModal(true)}
-                className="px-4 py-2 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-medium rounded-lg text-sm transition"
+                className="w-full sm:w-auto text-center px-4 py-2 border border-indigo-600 text-indigo-600 hover:bg-indigo-50 font-medium rounded-lg text-xs sm:text-sm transition"
               >
                 + Single Entry
               </button>
               <button
                 onClick={() => setShowCsvModal(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition shadow-sm"
+                className="w-full sm:w-auto text-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs sm:text-sm transition shadow-sm"
               >
                 ↑ Upload Attendance CSV
               </button>
@@ -225,24 +225,24 @@ function AttendancePage() {
         )}
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-sm">
             <span className="text-xs font-semibold text-gray-400 uppercase">Records Logged</span>
-            <div className="mt-2 text-3xl font-extrabold text-gray-900">{attendances.length}</div>
+            <div className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-gray-900">{attendances.length}</div>
             <div className="mt-1 text-xs text-gray-500">out of {employees.length} active employees</div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-sm">
             <span className="text-xs font-semibold text-gray-400 uppercase">Avg. Payable Days</span>
-            <div className="mt-2 text-3xl font-extrabold text-indigo-600">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-indigo-600">
               {attendances.length > 0
                 ? (attendances.reduce((acc, a) => acc + parseFloat(a.payableDays || 0), 0) / attendances.length).toFixed(1)
                 : '0.0'}
             </div>
             <div className="mt-1 text-xs text-gray-500">days / standard 26</div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+          <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-sm">
             <span className="text-xs font-semibold text-gray-400 uppercase">Ready for Payroll</span>
-            <div className="mt-2 text-3xl font-extrabold text-green-600">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-extrabold text-green-600">
               {attendances.length === employees.length && employees.length > 0 ? '100%' : `${attendances.length} / ${employees.length}`}
             </div>
             <div className="mt-1 text-xs text-gray-500">
@@ -253,8 +253,8 @@ function AttendancePage() {
 
         {/* Attendance Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="font-bold text-gray-900">Attendance Log for {month}/{year}</h2>
+          <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-bold text-gray-900 text-sm sm:text-base">Attendance Log for {month}/{year}</h2>
             <span className="text-xs text-gray-400">{attendances.length} records</span>
           </div>
 

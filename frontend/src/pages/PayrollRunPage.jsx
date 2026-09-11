@@ -151,24 +151,24 @@ function PayrollRunPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/dashboard" className="text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-700">Payroll Engine</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <span className="hidden sm:inline text-sm font-medium text-gray-700">Payroll Engine</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600 transition">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
-              <Link to="/attendance" className="text-sm text-gray-600 hover:text-indigo-600 transition">
+              <Link to="/attendance" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Attendance
               </Link>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -178,22 +178,22 @@ function PayrollRunPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {/* Trigger Payroll Run Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Batch Payroll Calculation</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Batch Payroll Calculation</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">
               Calculate salary prorations, EPF, PT, and TDS for all active employees
             </p>
           </div>
 
           {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && (
-            <form onSubmit={handleTriggerRun} className="flex flex-wrap items-center gap-3">
+            <form onSubmit={handleTriggerRun} className="flex flex-wrap items-center gap-2 sm:gap-3">
               <select
                 value={month}
                 onChange={(e) => setMonth(parseInt(e.target.value, 10))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="flex-1 sm:flex-initial px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
                 {[
                   'January', 'February', 'March', 'April', 'May', 'June',
@@ -206,7 +206,7 @@ function PayrollRunPage() {
               <select
                 value={year}
                 onChange={(e) => setYear(parseInt(e.target.value, 10))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="flex-1 sm:flex-initial px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
               >
                 <option value={2025}>2025</option>
                 <option value={2026}>2026</option>
@@ -216,7 +216,7 @@ function PayrollRunPage() {
               <button
                 type="submit"
                 disabled={runningPayroll}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition shadow-sm disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {runningPayroll ? (
                   <>
@@ -271,14 +271,14 @@ function PayrollRunPage() {
         {selectedRun ? (
           <>
             {/* Run Summary Dashboard & Approval Actions */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-6">
+            <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-200 space-y-5 sm:space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold text-gray-900">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                       Pay Cycle {selectedRun.month}/{selectedRun.year}
                     </h2>
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    <span className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-bold ${
                       selectedRun.status === 'LOCKED'
                         ? 'bg-purple-100 text-purple-800'
                         : selectedRun.status === 'APPROVED'
@@ -296,7 +296,7 @@ function PayrollRunPage() {
                 </div>
 
                 {/* 3-Step Approval Workflow Buttons */}
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   {selectedRun.status === 'DRAFT' && (role === 'MANAGER' || role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && (
                     <button
                       onClick={handleReview}
@@ -336,22 +336,22 @@ function PayrollRunPage() {
               </div>
 
               {/* Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <span className="text-xs font-semibold text-gray-500 uppercase">Total Gross Earnings</span>
-                  <div className="mt-1 text-2xl font-extrabold text-gray-900">
+                  <div className="mt-1 text-xl sm:text-2xl font-extrabold text-gray-900">
                     ₹{Number(selectedRun.totalGrossPay).toLocaleString('en-IN')}
                   </div>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <span className="text-xs font-semibold text-gray-500 uppercase">Total Statutory Deductions</span>
-                  <div className="mt-1 text-2xl font-extrabold text-red-600">
+                  <div className="mt-1 text-xl sm:text-2xl font-extrabold text-red-600">
                     ₹{Number(selectedRun.totalDeductions).toLocaleString('en-IN')}
                   </div>
                 </div>
                 <div className="p-4 bg-indigo-50 rounded-xl">
                   <span className="text-xs font-semibold text-indigo-700 uppercase">Total Net Disbursement</span>
-                  <div className="mt-1 text-2xl font-extrabold text-indigo-600">
+                  <div className="mt-1 text-xl sm:text-2xl font-extrabold text-indigo-600">
                     ₹{Number(selectedRun.totalNetPay).toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -360,8 +360,8 @@ function PayrollRunPage() {
 
             {/* Payroll Records Breakdown Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Employee Breakdown Records</h3>
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base">Employee Breakdown Records</h3>
                 <span className="text-xs text-gray-400">{records.length} line items</span>
               </div>
 

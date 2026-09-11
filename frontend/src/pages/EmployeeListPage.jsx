@@ -159,21 +159,21 @@ function EmployeeListPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/dashboard" className="text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-700">Employee Directory</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <span className="hidden sm:inline text-sm font-medium text-gray-700">Employee Directory</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600 transition">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -183,28 +183,28 @@ function EmployeeListPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
         {/* Header with Search & Add */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-6">
+        <div className="sm:flex sm:items-center sm:justify-between mb-6 space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Employees</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">
               Total {totalElements} employees across company departments
             </p>
           </div>
 
-          <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
-            <form onSubmit={handleSearchSubmit} className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
+            <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full sm:w-auto">
               <input
                 type="text"
                 placeholder="Search name, code, dept..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="px-3.5 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-64"
+                className="flex-1 sm:w-64 px-3.5 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm transition"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-xs sm:text-sm transition shrink-0"
               >
                 Search
               </button>
@@ -213,7 +213,7 @@ function EmployeeListPage() {
             {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && (
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm transition shadow-sm"
+                className="w-full sm:w-auto text-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-xs sm:text-sm transition shadow-sm"
               >
                 + Add Employee
               </button>
@@ -278,8 +278,8 @@ function EmployeeListPage() {
           </div>
 
           {/* Pagination Controls */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
+          <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-xs sm:text-sm text-gray-600">
               Showing page <span className="font-semibold">{page + 1}</span> of{' '}
               <span className="font-semibold">{totalPages}</span> ({totalElements} total)
             </div>
@@ -287,14 +287,14 @@ function EmployeeListPage() {
               <button
                 onClick={() => setPage((prev) => Math.max(0, prev - 1))}
                 disabled={page === 0 || loading}
-                className="px-3.5 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="px-3.5 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
                 disabled={page >= totalPages - 1 || loading}
-                className="px-3.5 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="px-3.5 py-1.5 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 Next
               </button>
@@ -305,8 +305,8 @@ function EmployeeListPage() {
 
       {/* Add Employee Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center mb-5 border-b pb-3">
               <h2 className="text-xl font-bold text-gray-900">Add New Employee</h2>
               <button

@@ -135,20 +135,20 @@ function EmployeeDetailPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <Link to="/dashboard" className="text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <Link to="/employees" className="text-sm text-gray-600 hover:text-indigo-600">Employees</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-900">{employee.empCode}</span>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <Link to="/employees" className="hidden sm:inline text-sm text-gray-600 hover:text-indigo-600">Employees</Link>
+              <span className="hidden sm:inline text-sm text-gray-400">/</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{employee.empCode}</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-sm text-gray-500 hover:text-red-600 transition"
+                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -158,22 +158,22 @@ function EmployeeDetailPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {/* Banner with Profile Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-2xl">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg sm:text-2xl">
               {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
             </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                   {employee.firstName} {employee.lastName}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
                   {employee.empCode}
                 </span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                <span className={`px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium ${
                   employee.status === 'ACTIVE'
                     ? 'bg-green-100 text-green-800'
                     : employee.status === 'ON_LEAVE'
@@ -183,23 +183,23 @@ function EmployeeDetailPage() {
                   {employee.status}
                 </span>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
                 {employee.designation || 'Designation not set'} • {employee.department} • Joined {employee.dateOfJoining}
               </p>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <Link
               to="/employees"
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition"
+              className="flex-1 sm:flex-initial text-center px-3.5 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-50 transition"
             >
               ← Back to List
             </Link>
             {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && employee.status !== 'EXITED' && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition"
+                className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs sm:text-sm font-medium transition"
               >
                 Exit Employee
               </button>

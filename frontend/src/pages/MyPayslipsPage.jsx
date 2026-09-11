@@ -61,13 +61,13 @@ function MyPayslipsPage() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <div className="flex items-center space-x-2">
                 <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
                   P
                 </span>
-                <span className="text-xl font-bold text-gray-900">PayrollPro</span>
-                <span className="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
+                <span className="text-lg sm:text-xl font-bold text-gray-900">PayrollPro</span>
+                <span className="hidden sm:inline text-xs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
                   Self-Service Portal
                 </span>
               </div>
@@ -94,7 +94,7 @@ function MyPayslipsPage() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-semibold text-gray-900">
                   {profile?.fullName || 'Employee'}
@@ -105,7 +105,7 @@ function MyPayslipsPage() {
               </div>
               <button
                 onClick={() => { logout(); navigate('/login'); }}
-                className="text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition"
+                className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition"
               >
                 Sign Out
               </button>
@@ -114,23 +114,45 @@ function MyPayslipsPage() {
         </div>
       </nav>
 
+      {/* Mobile Sub-Navigation Bar */}
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs">
+        <Link
+          to="/dashboard"
+          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
+        >
+          Dashboard
+        </Link>
+        <Link
+          to="/employee/payslips"
+          className="px-3 py-1.5 font-medium rounded-lg text-indigo-700 bg-indigo-50 whitespace-nowrap shrink-0"
+        >
+          My Payslips
+        </Link>
+        <Link
+          to="/leaves"
+          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
+        >
+          Leave Management
+        </Link>
+      </div>
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">My Payslip Statements</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">My Payslip Statements</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Access and download verified monthly salary slips with statutory breakdowns.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-gray-500 uppercase">Year Filter:</label>
+          <div className="flex items-center gap-2.5">
+            <label className="text-xs font-semibold text-gray-500 uppercase">Year:</label>
             <select
               value={searchYear}
               onChange={(e) => setSearchYear(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm bg-white font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
+              className="px-3 py-1.5 border rounded-lg text-sm bg-white font-medium text-gray-800 outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="ALL">All Years</option>
               {uniqueYears.map((y) => (
@@ -237,9 +259,9 @@ function MyPayslipsPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Earnings breakdown */}
-                <div className="bg-green-50/50 p-4 rounded-xl border border-green-200/60 space-y-2">
+                <div className="bg-green-50/50 p-3.5 sm:p-4 rounded-xl border border-green-200/60 space-y-2">
                   <h4 className="text-xs font-bold text-green-800 uppercase tracking-wider">Earnings</h4>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">Basic Salary:</span>
@@ -260,7 +282,7 @@ function MyPayslipsPage() {
                 </div>
 
                 {/* Deductions breakdown */}
-                <div className="bg-red-50/50 p-4 rounded-xl border border-red-200/60 space-y-2">
+                <div className="bg-red-50/50 p-3.5 sm:p-4 rounded-xl border border-red-200/60 space-y-2">
                   <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">Deductions</h4>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">EPF (Employee):</span>
@@ -282,17 +304,17 @@ function MyPayslipsPage() {
               </div>
 
               {/* Net Payout Banner */}
-              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200 flex justify-between items-center">
+              <div className="bg-indigo-50 p-3.5 sm:p-4 rounded-xl border border-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="text-xs text-indigo-700 font-medium">Net Take-Home Salary</div>
-                  <div className="text-2xl font-black text-indigo-950">
+                  <div className="text-xl sm:text-2xl font-black text-indigo-950">
                     ₹{parseFloat(selectedRecord.netPay || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </div>
                 </div>
                 <button
                   onClick={() => handleDownload(selectedRecord)}
                   disabled={downloadingId === selectedRecord.id}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
+                  className="w-full sm:w-auto text-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition disabled:opacity-50"
                 >
                   {downloadingId === selectedRecord.id ? 'Generating...' : 'Download Official PDF'}
                 </button>

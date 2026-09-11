@@ -63,13 +63,13 @@ function EmployeeDashboard() {
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <div className="flex items-center space-x-2">
                 <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
                   P
                 </span>
-                <span className="text-xl font-bold text-gray-900">PayrollPro</span>
-                <span className="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
+                <span className="text-lg sm:text-xl font-bold text-gray-900">PayrollPro</span>
+                <span className="hidden sm:inline text-xs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
                   Self-Service Portal
                 </span>
               </div>
@@ -96,7 +96,7 @@ function EmployeeDashboard() {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-semibold text-gray-900">
                   {profile?.fullName || 'Employee'}
@@ -108,7 +108,7 @@ function EmployeeDashboard() {
 
               <button
                 onClick={handleLogout}
-                className="text-xs font-semibold px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
+                className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
               >
                 Sign Out
               </button>
@@ -117,8 +117,30 @@ function EmployeeDashboard() {
         </div>
       </nav>
 
+      {/* Mobile Sub-Navigation Bar */}
+      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs">
+        <Link
+          to="/dashboard"
+          className="px-3 py-1.5 font-medium rounded-lg text-indigo-700 bg-indigo-50 whitespace-nowrap shrink-0"
+        >
+          Dashboard
+        </Link>
+        <Link
+          to="/employee/payslips"
+          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
+        >
+          My Payslips
+        </Link>
+        <Link
+          to="/leaves"
+          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
+        >
+          Leave Management
+        </Link>
+      </div>
+
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
             {error}
@@ -126,17 +148,17 @@ function EmployeeDashboard() {
         )}
 
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-blue-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="bg-gradient-to-r from-indigo-700 via-indigo-800 to-blue-900 rounded-2xl sm:rounded-3xl p-5 sm:p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-medium backdrop-blur-sm border border-white/20 mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-medium backdrop-blur-sm border border-white/20 mb-2 sm:mb-3">
                 <span className="w-2 h-2 rounded-full bg-green-400"></span>
                 Active Employee Profile
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight">
                 Welcome back, {profile?.fullName || 'Colleague'}!
               </h1>
-              <p className="text-indigo-200 text-sm mt-1 max-w-xl">
+              <p className="text-indigo-200 text-xs sm:text-sm mt-1 max-w-xl">
                 {profile?.designation || 'Staff'} • {profile?.department || 'General'} at {profile?.companyName || 'PayrollPro SaaS'}
               </p>
             </div>
@@ -145,9 +167,9 @@ function EmployeeDashboard() {
               <button
                 onClick={() => handleDownloadPdf(latestPayslip)}
                 disabled={downloadingId === latestPayslip.id}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-indigo-900 font-bold text-sm shadow-lg hover:bg-indigo-50 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-white text-indigo-900 font-bold text-xs sm:text-sm shadow-lg hover:bg-indigo-50 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 w-full sm:w-auto"
               >
-                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 {downloadingId === latestPayslip.id ? 'Generating PDF...' : 'Download Latest Payslip'}
@@ -157,7 +179,7 @@ function EmployeeDashboard() {
         </div>
 
         {/* 3 Overview Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Latest Salary Card */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 flex flex-col justify-between">
             <div>
