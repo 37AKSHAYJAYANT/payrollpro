@@ -36,7 +36,34 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/error").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .anyRequest().authenticated()
+                        // Public static frontend assets & SPA routes
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/assets/**",
+                                "/*.ico",
+                                "/*.png",
+                                "/*.svg",
+                                "/*.js",
+                                "/*.css",
+                                "/login",
+                                "/register",
+                                "/dashboard",
+                                "/dashboard/**",
+                                "/employees",
+                                "/employees/**",
+                                "/leaves",
+                                "/leaves/**",
+                                "/attendance",
+                                "/attendance/**",
+                                "/payroll",
+                                "/payroll/**",
+                                "/employee/**",
+                                "/my-payslips",
+                                "/my-payslips/**"
+                        ).permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -52,6 +52,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PostgreSQL Database (Free Cloud Deployment e.g. Neon, Supabase, Render) -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- JWT (JJWT 0.12.x - 3 artifacts) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
