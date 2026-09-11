@@ -1,0 +1,16 @@
+{
+  "name": "payrollpro-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for PayrollPro SaaS AI Copilot",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.0"
+  },
+  "keywords": ["mcp", "payroll", "copilot", "ai"],
+  "author": "PayrollPro Engineering",
+  "license": "ISC"
+}
