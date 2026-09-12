@@ -70,6 +70,9 @@ public class PayrollRecord {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal netPay;
 
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal reimbursements = BigDecimal.ZERO;
+
     // ---- Constructors ----
 
     public PayrollRecord() {
@@ -219,5 +222,13 @@ public class PayrollRecord {
 
     public void setNetPay(BigDecimal netPay) {
         this.netPay = netPay;
+    }
+
+    public BigDecimal getReimbursements() {
+        return reimbursements != null ? reimbursements : BigDecimal.ZERO;
+    }
+
+    public void setReimbursements(BigDecimal reimbursements) {
+        this.reimbursements = reimbursements != null ? reimbursements : BigDecimal.ZERO;
     }
 }

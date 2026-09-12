@@ -53,6 +53,9 @@ public class Employee {
     @Column
     private LocalDate dateOfExit;
 
+    @Column
+    private LocalDate dateOfBirth;
+
     @Column(length = 10)
     private String panNumber;
 
@@ -191,6 +194,14 @@ public class Employee {
 
     public void setDateOfExit(LocalDate dateOfExit) {
         this.dateOfExit = dateOfExit;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public String getPanNumber() {

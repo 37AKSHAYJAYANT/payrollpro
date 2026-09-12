@@ -168,6 +168,18 @@ function EmployeeListPage() {
               <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
+              <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Payroll
+              </Link>
+              <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Attendance
+              </Link>
+              <Link to="/leaves/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Leaves
+              </Link>
+              <Link to="/loans/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Loans
+              </Link>
               <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>

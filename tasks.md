@@ -313,11 +313,160 @@
 
 ---
 
-## Future Enhancements (Post-Delivery Backlog)
+## Phase 8: Bank Disbursal Batch Export Engine
 
-- `[ ]` **Task F.1:** Bank disbursal CSV/Excel export (Apache POI).
-- `[ ]` **Task F.2:** Email payslips to employees (JavaMail / SMTP).
-- `[ ]` **Task F.3:** ESI (Employee State Insurance) calculation for applicable salary brackets.
-- `[ ]` **Task F.4:** Annual Form 16 / Investment Declaration module.
-- `[ ]` **Task F.5:** Overtime and bonus calculation module.
-- `[ ]` **Task F.6:** Docker containerization for cloud deployment.
+**Goal:** Provide one-click generation of corporate internet banking batch upload files (HDFC CMS, ICICI CIB, Generic NEFT/RTGS CSV) for approved/locked payroll runs.
+
+- `[x]` **Task 8.1:** Bank profile formatters & DTOs
+  - Enum `BankDisbursalFormat`: `GENERIC_NEFT`, `HDFC_CMS`, `ICICI_CIB`.
+  - Service `BankDisbursalService`: Generates CSV/pipe streams mapping `PayrollRecord`, `Employee`, and `SalaryStructure`.
+- `[x]` **Task 8.2:** Pre-flight bank validation service
+  - Validates employee IFSC codes (`^[A-Z]{4}0[A-Z0-9]{6}$`), numeric account numbers, and non-zero payouts.
+  - Generates validation warning list for missing or invalid bank details.
+- `[x]` **Task 8.3:** Disbursal export REST endpoints
+  - `GET /api/payroll/runs/{id}/bank-export?format={format}`: Generates downloadable file.
+  - `GET /api/payroll/runs/{id}/bank-validation`: Returns pre-flight validation status.
+- `[x]` **Task 8.4:** React Bank Disbursal Export UI
+  - Add "Export Bank Disbursal" modal to `PayrollRunPage.jsx`.
+  - Bank selector dropdown (HDFC CMS / ICICI CIB / Standard NEFT).
+  - Validation alert banner before allowing download.
+- `[x]` **Task 8.5:** Unit & integration verification
+  - Verify formatting across all 3 bank formats against sample bank specifications.
+
+---
+
+## Phase 9: Full & Final (F&F) Settlement & Gratuity Engine
+
+**Goal:** Automate end-to-end exit settlements including statutory gratuity (Gratuity Act 1972), Earned Leave encashment, notice period recovery, and settlement PDF generation.
+
+- `[x]` **Task 9.1:** Create FnFSettlement entity & repository
+  - Entity `FnFSettlement`: employeeId, resignationDate, lastWorkingDate, noticePeriodDays, servedDays, leaveEncashmentAmount, gratuityAmount, noticeRecoveryAmount, netSettlementAmount, status (`DRAFT`, `APPROVED`, `SETTLED`).
+  - Repository `FnFSettlementRepository`.
+- `[x]` **Task 9.2:** Statutory calculation service
+  - Implement Gratuity formula: `(15 * Last Drawn Basic * Completed Years) / 26` (tenure >= 5 years).
+  - Implement EL Encashment: `(Basic / 26) * Remaining EL Balance`.
+  - Notice shortfall adjustment calculation.
+- `[x]` **Task 9.3:** F&F Settlement REST API
+  - `POST /api/settlements/calculate/{employeeId}`: Computes preview settlement.
+  - `POST /api/settlements`: Saves settlement record.
+  - `PUT /api/settlements/{id}/approve`: Approves settlement.
+  - `GET /api/settlements/{id}/statement-pdf`: Generates official settlement PDF.
+- `[x]` **Task 9.4:** OpenPDF Settlement Statement generator
+  - Multi-section official settlement statement with earnings, statutory deductions, recoveries, and net payout.
+- `[x]` **Task 9.5:** React F&F Settlement UI
+  - "Process Exit / F&F" action on `EmployeeDetailPage.jsx` and employee list.
+  - Interactive settlement worksheet with auto-computed gratuity, leave encashment, and live preview.
+
+---
+
+## Phase 10: Employee Loans, Salary Advances & Auto-EMI Deduction
+
+**Goal:** Enable employee emergency credit/advance requests and automate monthly EMI recovery during payroll processing.
+
+- `[x]` **Task 10.1:** Create LoanRecord & LoanRepayment entities
+  - `LoanRecord`: employeeId, principalAmount, tenureMonths, monthlyEmi, remainingPrincipal, status (`REQUESTED`, `APPROVED`, `ACTIVE`, `CLOSED`).
+  - `LoanRepayment`: loanId, payrollRunId, amount, paymentDate.
+- `[x]` **Task 10.2:** Loan application & approval REST API
+  - `POST /api/loans/apply`: Employee submits loan request with amount & tenure.
+  - `GET /api/loans/my-loans`: Employee views own loans and repayment schedule.
+  - `GET /api/loans/pending`: Admin/Finance views pending loan requests.
+  - `PUT /api/loans/{id}/approve`: Admin approves and activates loan.
+- `[x]` **Task 10.3:** Auto-EMI deduction in payroll calculation
+  - Update `PayrollCalculationService.java` to check for active loans and deduct EMI.
+  - Safeguard: Total deductions capped at 75% of gross pay.
+  - Create `LoanRepayment` record and update `LoanRecord.remainingPrincipal`.
+- `[x]` **Task 10.4:** React Loans Portal & Admin Management
+  - Employee portal: `MyLoansPage.jsx` with application form and repayment timeline.
+  - Admin portal: `LoanManagementPage.jsx` for review and ledger tracking.
+
+---
+
+## Phase 11: Statutory Returns & Government Filing Exporters
+
+**Goal:** Generate exact filing files required by EPFO and ESIC government portals.
+
+- `[x]` **Task 11.1:** EPFO Electronic Challan cum Return (ECR) text generator
+  - Service generating standard `#~#` delimited text file for direct EPFO portal upload.
+  - Maps UAN, Gross Wages, EPF Wages (capped at ₹15,000), EE Share (12%), EPS (8.33%), ER Share (3.67%), and NCP Days.
+- `[x]` **Task 11.2:** ESIC monthly contribution return exporter
+  - Generates CSV/Excel report for gross wages <= ₹21,000 (0.75% employee + 3.25% employer).
+- `[x]` **Task 11.3:** Statutory filings controller & download endpoints
+  - `GET /api/statutory/epfo-ecr?payrollRunId={id}`: Downloads `#~#` text file.
+  - `GET /api/statutory/esic-return?payrollRunId={id}`: Downloads ESIC CSV file.
+- `[x]` **Task 11.4:** React Statutory Compliance Dashboard
+  - Tab in Payroll dashboard for downloading EPFO ECR and ESIC returns with summary totals.
+
+---
+
+## Phase 12: Income Tax Declarations (Form 12BB) & Regime Engine
+
+**Goal:** Employee tax regime selection (Old vs New Regime Section 115BAC), Form 12BB deduction submissions, and dynamic TDS recalculation.
+
+- `[x]` **Task 12.1:** Create TaxDeclaration entity
+  - Fields: employeeId, financialYear, regime (`NEW_REGIME`, `OLD_REGIME`), section80C, section80D, section24HomeLoan, annualRentPaid, status (`DRAFT`, `SUBMITTED`, `VERIFIED`).
+- `[x]` **Task 12.2:** Dynamic TDS calculation engine
+  - Annual income projection formula based on chosen regime and approved declarations.
+  - Amortizes tax liability across remaining months in the financial year.
+- `[x]` **Task 12.3:** Tax declaration REST API
+  - `POST /api/tax/declaration`: Employee submits/updates declarations.
+  - `GET /api/tax/declaration/my`: Employee retrieves active declaration.
+  - `GET /api/tax/declarations/pending`: Admin reviews pending declarations.
+  - `PUT /api/tax/declarations/{id}/verify`: Admin approves/adjusts declared amounts.
+- `[x]` **Task 12.4:** React Tax Declaration Portal & Admin Verification
+  - Employee: `TaxDeclarationPage.jsx` with Old vs New regime comparator calculator.
+  - Admin: `TaxVerificationPage.jsx` for review and bulk approval.
+
+---
+
+## Phase 13: Variable Pay, Overtime & Bonus Engine
+
+**Goal:** Support monthly variable compensation (overtime, performance bonuses, incentives, and ad-hoc penalties) without altering base CTC.
+
+- `[x]` **Task 13.1:** Create VariablePayRecord entity & expand PayrollRecord
+  - `VariablePayRecord`: employeeId, month, year, type (`OVERTIME`, `BONUS`, `INCENTIVE`, `DEDUCTION`), amount, remarks.
+  - Expand `PayrollRecord`: `overtimePay`, `bonusAmount`, `otherAdditions`, `otherDeductions`.
+- `[x]` **Task 13.2:** Calculation engine & CSV bulk upload
+  - Update `PayrollCalculationService.java` to ingest variable pay into gross and net earnings.
+  - Endpoint `POST /api/payroll/variable-pay/upload-csv`: Bulk imports monthly variable pay.
+- `[x]` **Task 13.3:** Payslip PDF updates
+  - Display itemized Overtime and Bonus in earnings table, and ad-hoc deductions in deductions table.
+- `[x]` **Task 13.4:** React Variable Pay Manager
+  - "Manage Variable Pay" modal in `PayrollRunPage.jsx` with CSV upload and manual entry table.
+
+---
+
+## Phase 14: Secure Password-Protected Email Payslip Distribution
+
+**Goal:** Automatic asynchronous dispatch of encrypted PDF payslips directly to employee mailboxes upon payroll lock.
+
+- `[x]` **Task 14.1:** OpenPDF AES-128 encryption
+  - Add PDF password protection: First 4 uppercase letters of Name + DOB DDMM or PAN.
+- `[x]` **Task 14.2:** Asynchronous email dispatch service
+  - Add `spring-boot-starter-mail` and `@Async` thread-pool dispatcher.
+  - Safe development mode: logs email payload when SMTP credentials are not configured.
+- `[x]` **Task 14.3:** Email batch trigger & status API
+  - `POST /api/payroll/runs/{id}/send-payslips`: Queues payslip emails for all employees.
+  - `POST /api/payslips/{id}/send-email`: Resends payslip to single employee.
+- `[x]` **Task 14.4:** React Email Dispatch UI
+  - "Email All Payslips" action button on locked payroll runs.
+  - Live toast feedback and delivery status indicator per employee row.
+
+---
+
+## Phase 15: Employee Expense Reimbursement Claims
+
+**Goal:** Employee submission of non-taxable business expenses, receipt verification, and disbursal via payroll.
+
+- `[x]` **Task 15.1:** Create ExpenseClaim entity
+  - Fields: employeeId, claimDate, category (`TRAVEL`, `MEALS`, `BROADBAND`, `FUEL`, `OTHER`), amount, merchant, receiptUrl, status (`PENDING`, `APPROVED`, `REJECTED`, `DISBURSED`).
+- `[x]` **Task 15.2:** Expense claims REST API
+  - `POST /api/expenses/submit`: Employee submits claim with receipt.
+  - `GET /api/expenses/my`: Employee views claim history.
+  - `GET /api/expenses/pending`: Manager/Finance review queue.
+  - `PUT /api/expenses/{id}/approve` & `PUT /api/expenses/{id}/reject`.
+- `[x]` **Task 15.3:** Payroll payout integration
+  - Automatically bundle approved expense claims into the current month's payroll batch as non-taxable reimbursements.
+- `[x]` **Task 15.4:** React Expense Claims UI
+  - Employee `EmployeeDashboard.jsx`: Claim submission modal with category, amount, merchant, receipt URL.
+  - Interactive table of submitted claims with live status badges.
+

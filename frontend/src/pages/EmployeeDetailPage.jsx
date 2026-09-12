@@ -5,7 +5,11 @@ import {
   updateEmployee,
   deleteEmployee,
   getSalaryStructure,
-  saveSalaryStructure
+  saveSalaryStructure,
+  calculateFnFPreview,
+  saveFnFSettlement,
+  getFnFSettlementForEmployee,
+  downloadFnFSettlementPdf
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +23,22 @@ function EmployeeDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // FnF Settlement state
+  const [fnfSettlement, setFnfSettlement] = useState(null);
+  const [showFnFModal, setShowFnFModal] = useState(false);
+  const [fnfLoading, setFnfLoading] = useState(false);
+  const [fnfSaving, setFnfSaving] = useState(false);
+  const [fnfForm, setFnfForm] = useState({
+    resignationDate: new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0],
+    lastWorkingDate: new Date().toISOString().split('T')[0],
+    noticePeriodDays: 30,
+    servedDays: 30,
+    otherAdditions: 0,
+    otherDeductions: 0,
+    remarks: ''
+  });
+  const [fnfPreview, setFnfPreview] = useState(null);
 
   // CTC Edit form & Live Preview State
   const [editCtc, setEditCtc] = useState('');
@@ -63,10 +83,73 @@ function EmployeeDetailPage() {
         // Salary may not be configured yet
         setSalary(null);
       }
+
+      try {
+        const fnf = await getFnFSettlementForEmployee(id);
+        setFnfSettlement(fnf);
+      } catch {
+        setFnfSettlement(null);
+      }
     } catch (err) {
       setError(err.message || 'Failed to load employee details');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleOpenFnFModal() {
+    setShowFnFModal(true);
+    setFnfLoading(true);
+    try {
+      const preview = await calculateFnFPreview({
+        employeeId: Number(id),
+        ...fnfForm
+      });
+      setFnfPreview(preview);
+    } catch (err) {
+      setError(err.message || 'Failed to calculate settlement preview');
+    } finally {
+      setFnfLoading(false);
+    }
+  }
+
+  async function handleFnFFieldChange(field, val) {
+    const updated = { ...fnfForm, [field]: val };
+    setFnfForm(updated);
+    try {
+      const preview = await calculateFnFPreview({
+        employeeId: Number(id),
+        ...updated
+      });
+      setFnfPreview(preview);
+    } catch {}
+  }
+
+  async function handleSaveFnF() {
+    setFnfSaving(true);
+    try {
+      const saved = await saveFnFSettlement({
+        employeeId: Number(id),
+        ...fnfForm
+      });
+      setFnfSettlement(saved);
+      setShowFnFModal(false);
+      setSuccessMsg('Full & Final (F&F) Settlement successfully saved and employee marked EXITED!');
+      await loadData();
+      setTimeout(() => setSuccessMsg(''), 5000);
+    } catch (err) {
+      alert(err.message || 'Failed to finalize settlement');
+    } finally {
+      setFnfSaving(false);
+    }
+  }
+
+  async function handleDownloadFnFStatement() {
+    if (!fnfSettlement) return;
+    try {
+      await downloadFnFSettlementPdf(fnfSettlement.id, `FnF_Settlement_${employee.empCode}.pdf`);
+    } catch (err) {
+      alert(err.message || 'Failed to download statement PDF');
     }
   }
 
@@ -198,10 +281,26 @@ function EmployeeDetailPage() {
             </Link>
             {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && employee.status !== 'EXITED' && (
               <button
-                onClick={handleDelete}
-                className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs sm:text-sm font-medium transition"
+                onClick={handleOpenFnFModal}
+                className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition flex items-center justify-center gap-1.5"
               >
-                Exit Employee
+                <span>🚪</span> Process F&amp;F Exit
+              </button>
+            )}
+            {fnfSettlement && (
+              <button
+                onClick={handleDownloadFnFStatement}
+                className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition flex items-center justify-center gap-1.5"
+              >
+                <span>📄</span> Download F&amp;F Statement
+              </button>
+            )}
+            {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') && employee.status === 'EXITED' && !fnfSettlement && (
+              <button
+                onClick={handleOpenFnFModal}
+                className="flex-1 sm:flex-initial text-center px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition"
+              >
+                Calculate F&amp;F Settlement
               </button>
             )}
           </div>
@@ -216,6 +315,64 @@ function EmployeeDetailPage() {
         {successMsg && (
           <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
             {successMsg}
+          </div>
+        )}
+
+        {/* Full & Final Settlement Summary Banner if Exited */}
+        {fnfSettlement && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📋</span>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                    Full &amp; Final Settlement Record
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+                    {fnfSettlement.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Last working date: <span className="font-semibold">{fnfSettlement.lastWorkingDate}</span> • Service tenure: <span className="font-semibold">{fnfSettlement.completedYearsOfService} completed years</span>
+                </p>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-[11px] text-gray-500 font-semibold uppercase">Net Settlement Payable</div>
+                  <div className="text-lg sm:text-xl font-extrabold text-indigo-700">
+                    ₹{Number(fnfSettlement.netSettlementAmount || 0).toLocaleString('en-IN')}
+                  </div>
+                </div>
+                <button
+                  onClick={handleDownloadFnFStatement}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+                >
+                  Download Statement
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-purple-200/60 text-xs">
+              <div>
+                <span className="text-gray-500">Gratuity (Act 1972):</span>
+                <div className="font-bold text-gray-800">₹{Number(fnfSettlement.gratuityAmount || 0).toLocaleString('en-IN')}</div>
+              </div>
+              <div>
+                <span className="text-gray-500">EL Encashment ({fnfSettlement.leaveEncashmentDays} days):</span>
+                <div className="font-bold text-gray-800">₹{Number(fnfSettlement.leaveEncashmentAmount || 0).toLocaleString('en-IN')}</div>
+              </div>
+              <div>
+                <span className="text-gray-500">Notice Recovery:</span>
+                <div className="font-bold text-red-600">- ₹{Number(fnfSettlement.noticeRecoveryAmount || 0).toLocaleString('en-IN')}</div>
+              </div>
+              <div>
+                <span className="text-gray-500">Other Adjustments:</span>
+                <div className="font-bold text-gray-800">
+                  +₹{Number(fnfSettlement.otherAdditions || 0).toLocaleString('en-IN')} / -₹{Number(fnfSettlement.otherDeductions || 0).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -381,6 +538,192 @@ function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Full & Final Settlement Worksheet Modal */}
+      {showFnFModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-2xl w-full my-8 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-red-50 to-amber-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center text-lg">
+                  🚪
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Full &amp; Final (F&amp;F) Settlement Worksheet
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Exit calculation for {employee.firstName} {employee.lastName} ({employee.empCode})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFnFModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Exit Dates & Notice Parameters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Resignation Date
+                  </label>
+                  <input
+                    type="date"
+                    value={fnfForm.resignationDate}
+                    onChange={(e) => handleFnFFieldChange('resignationDate', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Last Working Date
+                  </label>
+                  <input
+                    type="date"
+                    value={fnfForm.lastWorkingDate}
+                    onChange={(e) => handleFnFFieldChange('lastWorkingDate', e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Notice Period Required (Days)
+                  </label>
+                  <input
+                    type="number"
+                    value={fnfForm.noticePeriodDays}
+                    onChange={(e) => handleFnFFieldChange('noticePeriodDays', parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Actual Notice Served (Days)
+                  </label>
+                  <input
+                    type="number"
+                    value={fnfForm.servedDays}
+                    onChange={(e) => handleFnFFieldChange('servedDays', parseInt(e.target.value, 10) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Other Additions / Reimbursements (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={fnfForm.otherAdditions}
+                    onChange={(e) => handleFnFFieldChange('otherAdditions', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Other Deductions / Recoveries (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={fnfForm.otherDeductions}
+                    onChange={(e) => handleFnFFieldChange('otherDeductions', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Exit / Settlement Remarks
+                </label>
+                <textarea
+                  rows="2"
+                  value={fnfForm.remarks}
+                  onChange={(e) => setFnfForm({ ...fnfForm, remarks: e.target.value })}
+                  placeholder="e.g. Resigned to pursue higher education, all IT assets returned"
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              {/* Live Preview Breakdown */}
+              {fnfLoading ? (
+                <div className="p-6 text-center text-xs text-gray-400">
+                  <div className="animate-spin inline-block w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full mb-2" />
+                  <div>Calculating statutory gratuity and leave balances...</div>
+                </div>
+              ) : fnfPreview ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3 text-xs">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="font-bold text-gray-700 uppercase">Statutory &amp; Exit Breakdown</span>
+                    <span className="text-gray-500">Service: {fnfPreview.completedYearsOfService} Completed Years</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Statutory Gratuity (Payment of Gratuity Act 1972):
+                        {fnfPreview.completedYearsOfService < 5 && <span className="ml-1 text-amber-600 font-semibold">(Tenure &lt; 5 yrs)</span>}
+                      </span>
+                      <span className="font-semibold text-gray-900">₹{Number(fnfPreview.gratuityAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Earned Leave (EL) Encashment ({fnfPreview.leaveEncashmentDays} days remaining):
+                      </span>
+                      <span className="font-semibold text-gray-900">₹{Number(fnfPreview.leaveEncashmentAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Other Additions / Reimbursements:</span>
+                      <span className="font-semibold text-gray-900">+ ₹{Number(fnfPreview.otherAdditions || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    {fnfPreview.noticePeriodDays > fnfPreview.servedDays && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Notice Shortfall Recovery ({fnfPreview.noticePeriodDays - fnfPreview.servedDays} days unserved):</span>
+                        <span className="font-semibold">- ₹{Number(fnfPreview.noticeRecoveryAmount || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {fnfPreview.otherDeductions > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Other Recoveries / Deductions:</span>
+                        <span className="font-semibold">- ₹{Number(fnfPreview.otherDeductions || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t flex justify-between items-center text-sm font-extrabold">
+                    <span className="text-indigo-900">NET SETTLEMENT PAYABLE:</span>
+                    <span className={fnfPreview.netSettlementAmount >= 0 ? 'text-indigo-700' : 'text-red-600'}>
+                      ₹{Number(fnfPreview.netSettlementAmount || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowFnFModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveFnF}
+                disabled={fnfSaving || fnfLoading}
+                className="px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition disabled:opacity-50"
+              >
+                {fnfSaving ? 'Processing Exit...' : 'Finalize Settlement & Exit Employee'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

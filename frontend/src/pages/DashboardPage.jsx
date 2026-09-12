@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { getEmployees, getAllPayrollRuns } from '../services/api';
+import { getEmployees, getAllPayrollRuns, getPendingLeaveRequests, getPendingLoans } from '../services/api';
 import EmployeeDashboard from './EmployeeDashboard';
 
 function DashboardPage() {
@@ -11,6 +11,8 @@ function DashboardPage() {
 
   const [empCount, setEmpCount] = useState(200);
   const [latestRun, setLatestRun] = useState(null);
+  const [pendingLeavesCount, setPendingLeavesCount] = useState(0);
+  const [pendingLoansCount, setPendingLoansCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   if (role === 'EMPLOYEE') {
@@ -34,6 +36,18 @@ function DashboardPage() {
           if (runs && runs.length > 0) setLatestRun(runs[0]);
         })
         .catch(() => {});
+
+      getPendingLeaveRequests()
+        .then((leaves) => {
+          if (Array.isArray(leaves)) setPendingLeavesCount(leaves.length);
+        })
+        .catch(() => setPendingLeavesCount(0));
+
+      getPendingLoans()
+        .then((loans) => {
+          if (Array.isArray(loans)) setPendingLoansCount(loans.length);
+        })
+        .catch(() => setPendingLoansCount(0));
     }
   }, [role, location.search]);
 
@@ -66,6 +80,31 @@ function DashboardPage() {
               <span className="hidden sm:inline text-sm text-gray-500">Executive Console</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
+              <Link to="/employees" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Employees
+              </Link>
+              <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Payroll
+              </Link>
+              <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                Attendance
+              </Link>
+              <Link to="/leaves/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition flex items-center gap-1">
+                Leaves
+                {pendingLeavesCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-bold leading-none">
+                    {pendingLeavesCount}
+                  </span>
+                )}
+              </Link>
+              <Link to="/loans/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition flex items-center gap-1">
+                Loans
+                {pendingLoansCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-bold leading-none animate-pulse">
+                    {pendingLoansCount}
+                  </span>
+                )}
+              </Link>
               <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>
@@ -103,6 +142,31 @@ function DashboardPage() {
           </div>
         )}
 
+        {/* Pending Loan Action Alert Banner */}
+        {pendingLoansCount > 0 && (
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold text-xl">
+                💰
+              </span>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold">
+                  {pendingLoansCount} Emergency Loan / Advance Application Pending HR Approval
+                </h3>
+                <p className="text-xs text-amber-100 mt-0.5">
+                  An employee has submitted a salary advance or loan request. Review &amp; approve to activate auto-recovery.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/loans/approvals"
+              className="px-4 py-2 bg-white text-amber-800 hover:bg-amber-50 font-bold text-xs rounded-xl shadow transition whitespace-nowrap text-center"
+            >
+              Review Loan Applications →
+            </Link>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
@@ -121,8 +185,8 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* 4 Quick Stat Cards (Task 7.3) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* 5 Quick Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
             <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Headcount</div>
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1.5">{empCount}</div>
@@ -137,13 +201,33 @@ function DashboardPage() {
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
             <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Leaves</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1.5">1</div>
-            <Link to="/leaves/approvals" className="text-[11px] sm:text-xs text-amber-700 hover:underline mt-1 block">
-              Review requests →
-            </Link>
+            <div className={`text-2xl sm:text-3xl font-extrabold mt-1.5 ${pendingLeavesCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+              {pendingLeavesCount}
+            </div>
+            {pendingLeavesCount > 0 ? (
+              <Link to="/leaves/approvals" className="text-[11px] sm:text-xs text-amber-700 hover:underline mt-1 block">
+                Review requests →
+              </Link>
+            ) : (
+              <div className="text-[11px] sm:text-xs text-green-600 mt-1 font-medium">● All clear</div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
+            <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending Loans</div>
+            <div className={`text-2xl sm:text-3xl font-extrabold mt-1.5 ${pendingLoansCount > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+              {pendingLoansCount}
+            </div>
+            {pendingLoansCount > 0 ? (
+              <Link to="/loans/approvals" className="text-[11px] sm:text-xs text-amber-700 hover:underline mt-1 block font-bold">
+                Review &amp; Approve →
+              </Link>
+            ) : (
+              <div className="text-[11px] sm:text-xs text-gray-400 mt-1 font-medium">● None pending</div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200 col-span-2 lg:col-span-1">
             <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Exited / Separated</div>
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-400 mt-1.5">0</div>
             <div className="text-[11px] sm:text-xs text-gray-400 mt-1">0% Turnover rate</div>
@@ -264,7 +348,7 @@ function DashboardPage() {
 
             {/* Leave Management Card */}
             <Link
-              to="/leaves"
+              to="/leaves/approvals"
               className="group block bg-white rounded-2xl p-5 shadow-sm border border-gray-200 hover:border-emerald-500 hover:shadow-md transition"
             >
               <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-emerald-600 group-hover:text-white transition">

@@ -162,4 +162,39 @@ class PayrollCalculationServiceTest {
         assertEquals(new BigDecimal("1800.00"), record.getEpfDeduction());
         assertTrue(record.getNetPay().compareTo(BigDecimal.ZERO) > 0);
     }
+
+    @Test
+    @DisplayName("Variable Pay Integration - Overtime/Bonus increases gross, Deduction increases total deductions")
+    void testVariablePayCalculation() {
+        SalaryStructure salary = new SalaryStructure();
+        salary.setCompanyId(1L);
+        salary.setEmployeeId(1L);
+        salary.setBasicSalary(new BigDecimal("50000.00"));
+        salary.setHra(new BigDecimal("20000.00"));
+        salary.setSpecialAllowance(new BigDecimal("30000.00"));
+        salary.setMonthlyGross(new BigDecimal("100000.00"));
+        salary.setEpfEmployee(new BigDecimal("1800.00"));
+        salary.setProfessionalTax(new BigDecimal("200.00"));
+        salary.setMonthlyTds(new BigDecimal("5000.00"));
+
+        Attendance attendance = new Attendance(
+                1L, 1L, 9, 2026, 26,
+                new BigDecimal("26.0"), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("26.0"),
+                AttendanceSource.MANUAL
+        );
+
+        BigDecimal variableEarnings = new BigDecimal("8000.00"); // e.g. 5000 bonus + 3000 overtime
+        BigDecimal variableDeductions = new BigDecimal("1500.00"); // e.g. 1500 penalty/advance recovery
+
+        PayrollRecord record = calculationService.calculateForEmployee(
+                sampleEmployee, salary, attendance, 100L, variableEarnings, variableDeductions);
+
+        assertNotNull(record);
+        // Gross earned = 100,000 + 8,000 = 108,000.00
+        assertEquals(new BigDecimal("108000.00"), record.getGrossEarned());
+        // Total deductions = 1800 (EPF) + 200 (PT) + 5000 (TDS) + 1500 (Var Ded) = 8500.00
+        assertEquals(new BigDecimal("8500.00"), record.getTotalDeductions());
+        // Net pay = 108000 - 8500 = 99500.00
+        assertEquals(new BigDecimal("99500.00"), record.getNetPay());
+    }
 }

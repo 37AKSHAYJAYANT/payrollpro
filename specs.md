@@ -434,3 +434,177 @@ SERVER_PORT=8080
   }
 }
 ```
+
+---
+
+## 10. Enterprise Specification: Bank Disbursal Batch Export Engine
+
+### 10.1 Overview & Banking Standards
+Enterprise payroll requires bulk payment generation formatted to corporate internet banking standards. Once a `PayrollRun` enters `APPROVED` or `LOCKED` state, finance teams can export formatted batch files.
+
+### 10.2 Supported Bank Profiles
+1. **Generic NEFT / RTGS (CSV)**
+   - Headers: `Beneficiary Account Number,Beneficiary Name,IFSC Code,Amount,Payment Reference,Remarks`
+2. **HDFC Bank CMS (Pipe-delimited or CSV)**
+   - Format: `Record Type|Beneficiary Code|Beneficiary Account|Amount|Beneficiary Name|IFSC|Debit Account|Value Date|Email`
+3. **ICICI Bank CIB (Corporate Internet Banking CSV)**
+   - Format: `Payment Type,Beneficiary Account,Amount,Beneficiary Name,IFSC,Debit Account Number,Remarks`
+
+### 10.3 Pre-Flight Validation Rules
+- Account number must be 9–18 numeric characters.
+- IFSC must match regular expression `^[A-Z]{4}0[A-Z0-9]{6}$`.
+- Payout amount must be $> 0$ (excludes employees with negative or zero net pay).
+- Flags duplicates and missing bank details before file generation.
+
+### 10.4 REST API Contract
+- `GET /api/payroll/runs/{id}/bank-export?format={GENERIC_NEFT|HDFC_CMS|ICICI_CIB}`
+  - Returns `text/csv` with `Content-Disposition: attachment; filename="bank_disbursal_{month}_{year}_{format}.csv"`.
+- `GET /api/payroll/runs/{id}/bank-validation`
+  - Returns validation summary: `{ validCount: 198, invalidCount: 2, invalidRecords: [...] }`.
+
+---
+
+## 11. Enterprise Specification: Full & Final (F&F) Settlement & Gratuity Engine
+
+### 11.1 Overview & Legal Mandates
+When an employee resigns or exits, their final compensation must account for statutory leave encashment, gratuity, notice period adjustments, and asset clearance.
+
+### 11.2 Statutory Formulas
+1. **Earned Leave (EL) Encashment** (as per Factories Act & standard enterprise practice):
+   $$\text{Daily Basic Wage} = \frac{\text{Monthly Basic Salary}}{26}$$
+   $$\text{EL Encashment} = \text{Remaining EL Balance} \times \text{Daily Basic Wage}$$
+2. **Statutory Gratuity** (under Payment of Gratuity Act 1972):
+   - Eligibility: Completed tenure $\ge 5$ years (1825 days).
+   $$\text{Gratuity} = \frac{15 \times \text{Last Drawn Basic} \times \text{Completed Years of Service}}{26}$$
+3. **Notice Shortfall Recovery**:
+   $$\text{Shortfall Deduction} = \frac{\text{Monthly Gross}}{30} \times (\text{Notice Period Days} - \text{Served Days})$$
+
+### 11.3 F&F Entity & Lifecycle
+- Entity: `FnFSettlement`
+  - Fields: `id`, `companyId`, `employeeId`, `resignationDate`, `lastWorkingDate`, `noticePeriodDays`, `servedDays`, `leaveEncashmentDays`, `leaveEncashmentAmount`, `gratuityAmount`, `noticeRecoveryAmount`, `pendingReimbursements`, `loanRecoveryAmount`, `netSettlementAmount`, `status` (`DRAFT`, `APPROVED`, `SETTLED`), `remarks`.
+- Document: Generates an official multi-page **Full & Final Settlement Statement PDF**.
+
+---
+
+## 12. Enterprise Specification: Employee Loans, Salary Advances & Auto-EMI
+
+### 12.1 Overview
+Enables companies to extend emergency advances and salary loans to employees, automating repayment by deducting fixed EMIs during the monthly payroll run.
+
+### 12.2 Loan Lifecycle & State Machine
+1. `REQUESTED`: Employee submits loan amount, tenure in months, and emergency reason.
+2. `APPROVED`: HR/Finance approves terms and disburses funds.
+3. `ACTIVE`: Linked to payroll engine; automatically deducts EMI each month.
+4. `CLOSED`: Principal fully recovered (outstanding balance = 0).
+
+### 12.3 Payroll Integration Algorithm
+During `PayrollCalculationService.calculateForEmployee()`:
+1. Query active loans for the employee: `loanRepository.findByEmployeeIdAndStatus(empId, ACTIVE)`.
+2. Determine monthly EMI: $\min(\text{Monthly EMI}, \text{Remaining Principal})$.
+3. Check net pay safeguard: Total deductions (Statutory + EMI) must not exceed 75% of Gross Pay (payment of wages compliance).
+4. Deduct EMI from Net Pay, create `LoanRepayment` record, and reduce `outstandingPrincipal`.
+
+---
+
+## 13. Enterprise Specification: Statutory Returns & Government Filing Exporters
+
+### 13.1 EPFO Electronic Challan cum Return (ECR)
+The Employees' Provident Fund Organisation (EPFO) requires a `#~#` delimited plain text file for monthly PF return submission.
+
+#### ECR File Format (Columns delimited by `#~#`):
+1. `UAN` (Universal Account Number - 12 digits)
+2. `Member Name` (as registered with EPFO)
+3. `Gross Wages` (Monthly gross salary)
+4. `EPF Wages` (Basic salary capped at ₹15,000 for EPF)
+5. `EPS Wages` (Pension wages capped at ₹15,000)
+6. `EDLI Wages` (Deposit-linked insurance capped at ₹15,000)
+7. `EE Share Remitted` (12% of EPF wages)
+8. `EPS Contribution` (8.33% of EPS wages)
+9. `ER Share Remitted` (3.67% of EPF wages = EE Share - EPS)
+10. `NCP Days` (Non-contributing period / Unpaid leave days)
+11. `Refund of Advances` (0.00 default)
+
+### 13.2 ESIC Return of Contribution
+For employees earning Gross Salary $\le$ ₹21,000/month:
+- Employee Contribution: 0.75% of Gross.
+- Employer Contribution: 3.25% of Gross.
+- Export format: Monthly Excel/CSV for ESIC portal upload.
+
+### 13.3 Quarterly TDS Form 24Q Annexure Export
+- Generates data required for NSDL e-TDS return filing: Deductor TAN, PAN of employees, taxable income, and tax deducted.
+
+---
+
+## 14. Enterprise Specification: Income Tax Declarations (Form 12BB) & Regime Engine
+
+### 14.1 Tax Regimes (Section 115BAC)
+- **New Tax Regime (Default)**: Concessional tax slabs with zero chapter VI-A deductions.
+- **Old Tax Regime**: Standard tax slabs with chapter VI-A deductions:
+  - Section 80C: Maximum deduction of ₹1,50,000 (EPF, PPF, ELSS, Life Insurance).
+  - Section 80D: Health insurance premium (up to ₹25,000 self/family + ₹50,000 senior parents).
+  - Section 24: Home loan interest deduction (up to ₹2,00,000).
+  - Section 10(13A): HRA exemption based on actual rent paid, city type (Metro 50% vs Non-Metro 40%), and basic salary.
+
+### 14.2 Dynamic TDS Algorithm
+- $\text{Estimated Annual Taxable Income} = (\text{Monthly Gross} \times 12) - \text{Standard Deduction (₹50,000/₹75,000)} - \text{Approved Declarations}$.
+- Apply applicable tax slab rates + 4% Health & Education Cess.
+- $\text{Monthly TDS} = \frac{\text{Total Annual Tax Liability} - \text{TDS Deducted to Date}}{\text{Remaining Months in Fiscal Year}}$.
+
+---
+
+## 15. Enterprise Specification: Variable Pay, Overtime & Bonus Engine
+
+### 15.1 Additions & Deductions
+- **Additions**:
+  - Overtime Pay: $\frac{\text{Monthly Basic}}{26 \times 8} \times \text{Overtime Hours} \times \text{Multiplier (1.5x or 2.0x)}$.
+  - Performance Bonus / Sales Incentives.
+  - Festive Bonus (Diwali / Annual).
+  - Arrears / Special Payouts.
+- **Deductions**:
+  - Unreturned equipment recovery / loss damage.
+  - Salary advance ad-hoc recovery.
+  - Notice recovery.
+
+### 15.2 Ingestion Mechanisms
+1. Direct modal entry in Payroll Run review screen.
+2. Bulk CSV upload: `empCode, overtimeHours, bonusAmount, incentiveAmount, otherDeductions, remarks`.
+
+---
+
+## 16. Enterprise Specification: Password-Protected Email Payslip Distribution
+
+### 16.1 Security & Encryption Standard
+- OpenPDF standard 128-bit AES encryption:
+  ```java
+  pdfWriter.setEncryption(userPassword.getBytes(), ownerPassword.getBytes(), PdfWriter.ALLOW_PRINTING, PdfWriter.ENCRYPTION_AES_128);
+  ```
+- **Password Convention**: Uppercase first 4 letters of Employee Name + Date of Birth in DDMM format (e.g. `AARA1508`).
+
+### 16.2 Asynchronous Batch Dispatching
+- Asynchronous worker pool (`@Async` with thread pool executor) to dispatch 200–500 emails without locking the HTTP connection.
+- Track email delivery status per record: `PENDING`, `SENT`, `FAILED`.
+
+---
+
+## 17. Enterprise Specification: Employee Expense Reimbursement Claims
+
+### 17.1 Workflow
+1. Employee submits claim: Date, Category (`TRAVEL`, `MEALS`, `BROADBAND`, `FUEL`, `OTHER`), Amount, Merchant, Description, Receipt URL.
+2. Manager / HR review: Pending approval queue with Approve and Reject actions.
+3. Once approved, the claim is automatically pulled into the upcoming payroll batch as a **non-taxable reimbursement payout**, disbursed alongside net pay, and rendered cleanly on the encrypted payslip.
+
+### 17.2 Entity & Statuses
+- Entity: `ExpenseClaim`
+  - Fields: `id`, `companyId`, `employeeId`, `claimDate`, `category`, `amount`, `merchant`, `description`, `receiptUrl`, `status` (`PENDING`, `APPROVED`, `REJECTED`, `DISBURSED`), `approvedAt`, `remarks`, `createdAt`.
+- Enums:
+  - `ExpenseCategory`: `TRAVEL`, `MEALS`, `BROADBAND`, `FUEL`, `OTHER`
+  - `ExpenseClaimStatus`: `PENDING`, `APPROVED`, `REJECTED`, `DISBURSED`
+
+### 17.3 REST API Contracts
+- `POST /api/expenses/submit`: Submit a new claim with receipt and description.
+- `GET /api/expenses/my`: Retrieve claim history for the authenticated employee.
+- `GET /api/expenses/pending`: Retrieve pending approval queue for managers and company admins.
+- `GET /api/expenses`: Retrieve all tenant expense claims.
+- `PUT /api/expenses/{id}/approve`: Approve claim for upcoming payroll cycle.
+- `PUT /api/expenses/{id}/reject`: Reject claim with optional remarks.
+

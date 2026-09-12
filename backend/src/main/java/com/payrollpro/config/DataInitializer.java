@@ -140,6 +140,7 @@ public class DataInitializer implements CommandLineRunner {
             employee.setDepartment(dept);
             employee.setDesignation(desig);
             employee.setDateOfJoining(doj);
+            employee.setDateOfBirth(LocalDate.of(1990 + (i % 12), 1 + (i % 12), 1 + (i % 28)));
             employee.setPanNumber(panNumber);
             employee.setAadhaarNumber(aadhaarNumber);
             employee.setBankName(bankName);

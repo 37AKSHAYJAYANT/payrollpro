@@ -16,6 +16,15 @@ public class PayrollCalculationService {
                                               SalaryStructure salaryStructure,
                                               Attendance attendance,
                                               Long payrollRunId) {
+        return calculateForEmployee(employee, salaryStructure, attendance, payrollRunId, BigDecimal.ZERO, BigDecimal.ZERO);
+    }
+
+    public PayrollRecord calculateForEmployee(Employee employee,
+                                              SalaryStructure salaryStructure,
+                                              Attendance attendance,
+                                              Long payrollRunId,
+                                              BigDecimal variableEarnings,
+                                              BigDecimal variableDeductions) {
         PayrollRecord record = new PayrollRecord();
         record.setCompanyId(employee.getCompanyId());
         record.setPayrollRunId(payrollRunId);
@@ -56,6 +65,9 @@ public class PayrollCalculationService {
                 .setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal grossEarned = basicEarned.add(hraEarned).add(specialAllowanceEarned);
+        if (variableEarnings != null && variableEarnings.compareTo(BigDecimal.ZERO) > 0) {
+            grossEarned = grossEarned.add(variableEarnings);
+        }
 
         record.setBasicEarned(basicEarned);
         record.setHraEarned(hraEarned);
@@ -76,6 +88,9 @@ public class PayrollCalculationService {
                 : BigDecimal.ZERO;
 
         BigDecimal totalDeductions = epf.add(pt).add(tds);
+        if (variableDeductions != null && variableDeductions.compareTo(BigDecimal.ZERO) > 0) {
+            totalDeductions = totalDeductions.add(variableDeductions);
+        }
 
         record.setEpfDeduction(epf);
         record.setProfessionalTax(pt);
@@ -84,6 +99,7 @@ public class PayrollCalculationService {
 
         // 3. NET PAY = Gross Earned - Total Deductions
         BigDecimal netPay = grossEarned.subtract(totalDeductions);
+        record.setReimbursements(BigDecimal.ZERO);
         record.setNetPay(netPay);
 
         return record;

@@ -237,4 +237,289 @@ export async function downloadPayslipPdf(recordId, filename = 'payslip.pdf') {
   document.body.removeChild(a);
 }
 
+export async function validateBankDisbursal(runId) {
+  return apiRequest(`/api/payroll/runs/${runId}/bank-validation`);
+}
+
+export async function downloadBankDisbursal(runId, format = 'GENERIC_NEFT') {
+  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const response = await fetch(`/api/payroll/runs/${runId}/bank-export?format=${format}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to export bank file: HTTP ${response.status}`;
+    try {
+      const err = await response.json();
+      msg = err.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const ext = format === 'HDFC_CMS' ? 'txt' : 'csv';
+  const filename = `bank_disbursal_run_${runId}_${format.toLowerCase()}.${ext}`;
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+// ---- Full & Final (F&F) Settlement API ----
+export async function calculateFnFPreview(data) {
+  return apiRequest('/api/settlements/calculate', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function saveFnFSettlement(data) {
+  return apiRequest('/api/settlements', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function getAllFnFSettlements() {
+  return apiRequest('/api/settlements');
+}
+
+export async function getFnFSettlementForEmployee(employeeId) {
+  return apiRequest(`/api/settlements/employee/${employeeId}`);
+}
+
+export async function approveFnFSettlement(id) {
+  return apiRequest(`/api/settlements/${id}/approve`, {
+    method: 'PUT'
+  });
+}
+
+export async function downloadFnFSettlementPdf(id, filename = 'Settlement_Statement.pdf') {
+  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const response = await fetch(`/api/settlements/${id}/statement-pdf`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download settlement PDF: HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+// ---- Employee Loans & Salary Advances API ----
+export async function applyForLoan(data) {
+  return apiRequest('/api/loans/apply', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function getMyLoans() {
+  return apiRequest('/api/loans/my');
+}
+
+export async function getLoansForEmployee(employeeId) {
+  return apiRequest(`/api/loans/employee/${employeeId}`);
+}
+
+export async function getAllLoans() {
+  return apiRequest('/api/loans');
+}
+
+export async function getPendingLoans() {
+  return apiRequest('/api/loans/pending');
+}
+
+export async function approveLoan(id) {
+  return apiRequest(`/api/loans/${id}/approve`, {
+    method: 'PUT'
+  });
+}
+
+export async function rejectLoan(id) {
+  return apiRequest(`/api/loans/${id}/reject`, {
+    method: 'PUT'
+  });
+}
+
+// ---- Statutory Compliance Returns (EPFO & ESIC) API ----
+export async function getStatutorySummary(payrollRunId) {
+  return apiRequest(`/api/statutory/summary?payrollRunId=${payrollRunId}`);
+}
+
+export async function downloadEpfoEcrText(payrollRunId, filename = `EPFO_ECR_Run_${payrollRunId}.txt`) {
+  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const response = await fetch(`/api/statutory/epfo-ecr?payrollRunId=${payrollRunId}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download EPFO ECR return: HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+export async function downloadEsicReturnCsv(payrollRunId, filename = `ESIC_Return_Run_${payrollRunId}.csv`) {
+  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const response = await fetch(`/api/statutory/esic-return?payrollRunId=${payrollRunId}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download ESIC return CSV: HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+// ---- Income Tax Declarations (Form 12BB & Regime) API ----
+export async function submitMyTaxDeclaration(data) {
+  return apiRequest('/api/tax/declaration', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function getMyTaxDeclaration(financialYear = '2026-2027') {
+  return apiRequest(`/api/tax/declaration/my?financialYear=${financialYear}`);
+}
+
+export async function getPendingTaxDeclarations() {
+  return apiRequest('/api/tax/declarations/pending');
+}
+
+export async function verifyTaxDeclaration(id, status = 'VERIFIED', remarks = '') {
+  return apiRequest(`/api/tax/declarations/${id}/verify?status=${status}&remarks=${encodeURIComponent(remarks)}`, {
+    method: 'PUT'
+  });
+}
+
+// ---- Email Payslip Distribution API ----
+export async function sendBatchPayslips(payrollRunId) {
+  return apiRequest(`/api/payroll/runs/${payrollRunId}/send-payslips`, {
+    method: 'POST'
+  });
+}
+
+export async function sendPayslipEmail(recordId) {
+  return apiRequest(`/api/payroll/records/${recordId}/send-email`, {
+    method: 'POST'
+  });
+}
+
+// ---- Variable Pay, Overtime & Bonus API ----
+export async function getVariablePayForMonth(month, year) {
+  return apiRequest(`/api/payroll/variable-pay?month=${month}&year=${year}`);
+}
+
+export async function addVariablePayEntry(data) {
+  return apiRequest('/api/payroll/variable-pay', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteVariablePayEntry(id) {
+  return apiRequest(`/api/payroll/variable-pay/${id}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function uploadVariablePayCsv(file, month, year) {
+  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`/api/payroll/variable-pay/upload-csv?month=${month}&year=${year}`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    let errorMessage = `API error: ${response.status}`;
+    try {
+      const err = await response.json();
+      errorMessage = err.message || err.error || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+// ---- Expense Claims API ----
+export async function getExpenseClaims() {
+  return apiRequest('/api/expenses');
+}
+
+export async function getMyExpenseClaims() {
+  return apiRequest('/api/expenses/my');
+}
+
+export async function getPendingExpenseClaims() {
+  return apiRequest('/api/expenses/pending');
+}
+
+export async function submitExpenseClaim(data) {
+  return apiRequest('/api/expenses/submit', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function approveExpenseClaim(id, remarks = '') {
+  return apiRequest(`/api/expenses/${id}/approve`, {
+    method: 'PUT',
+    body: JSON.stringify({ remarks })
+  });
+}
+
+export async function rejectExpenseClaim(id, remarks = '') {
+  return apiRequest(`/api/expenses/${id}/reject`, {
+    method: 'PUT',
+    body: JSON.stringify({ remarks })
+  });
+}
+
 export { apiRequest };

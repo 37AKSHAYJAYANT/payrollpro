@@ -28,6 +28,8 @@ public class EmployeeRequest {
     @NotNull(message = "Date of joining is required")
     private LocalDate dateOfJoining;
 
+    private LocalDate dateOfBirth;
+
     @Pattern(regexp = "^$|[A-Z]{5}[0-9]{4}[A-Z]{1}", message = "PAN must follow standard format (e.g. ABCDE1234F)")
     private String panNumber;
 
@@ -113,6 +115,14 @@ public class EmployeeRequest {
 
     public void setDateOfJoining(LocalDate dateOfJoining) {
         this.dateOfJoining = dateOfJoining;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public String getPanNumber() {

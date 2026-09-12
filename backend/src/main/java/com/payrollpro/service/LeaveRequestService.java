@@ -28,6 +28,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -73,15 +74,17 @@ public class LeaveRequestService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
     }
 
-    private Employee getCurrentEmployee(User user, Long companyId) {
+    private java.util.Optional<Employee> findCurrentEmployee(User user, Long companyId) {
         if (user.getEmployeeId() != null) {
-            return employeeRepository.findByCompanyIdAndId(companyId, user.getEmployeeId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee record not found"));
+            return employeeRepository.findByCompanyIdAndId(companyId, user.getEmployeeId());
         }
-        // Fallback: look up by email
         return employeeRepository.findAllByCompanyId(companyId).stream()
                 .filter(e -> e.getEmail().equalsIgnoreCase(user.getEmail()))
-                .findFirst()
+                .findFirst();
+    }
+
+    private Employee getCurrentEmployee(User user, Long companyId) {
+        return findCurrentEmployee(user, companyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No linked employee profile for user " + user.getEmail()));
     }
 
@@ -144,7 +147,10 @@ public class LeaveRequestService {
     public List<LeaveRequestResponse> getMyRequests() {
         Long companyId = getRequiredCompanyId();
         User user = getAuthenticatedUser();
-        Employee employee = getCurrentEmployee(user, companyId);
+        Employee employee = findCurrentEmployee(user, companyId).orElse(null);
+        if (employee == null) {
+            return Collections.emptyList();
+        }
 
         List<LeaveRequest> requests = leaveRequestRepository.findAllByCompanyIdAndEmployeeIdOrderByCreatedAtDesc(companyId, employee.getId());
         Map<Long, LeaveType> typeMap = leaveTypeRepository.findAllByCompanyId(companyId).stream()
@@ -158,7 +164,10 @@ public class LeaveRequestService {
     public List<LeaveBalanceResponse> getMyBalances() {
         Long companyId = getRequiredCompanyId();
         User user = getAuthenticatedUser();
-        Employee employee = getCurrentEmployee(user, companyId);
+        Employee employee = findCurrentEmployee(user, companyId).orElse(null);
+        if (employee == null) {
+            return Collections.emptyList();
+        }
 
         int currentYear = LocalDate.now().getYear();
         return leaveBalanceService.getMyBalances(companyId, employee.getId(), currentYear);

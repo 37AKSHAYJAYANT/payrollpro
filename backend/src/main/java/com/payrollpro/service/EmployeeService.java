@@ -148,6 +148,7 @@ public class EmployeeService {
         emp.setDepartment(req.getDepartment());
         emp.setDesignation(req.getDesignation());
         emp.setDateOfJoining(req.getDateOfJoining());
+        emp.setDateOfBirth(req.getDateOfBirth());
         emp.setPanNumber(req.getPanNumber());
         emp.setAadhaarNumber(req.getAadhaarNumber());
         emp.setBankAccountNumber(req.getBankAccountNumber());

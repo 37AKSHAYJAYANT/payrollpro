@@ -18,6 +18,7 @@ public class EmployeeResponse {
     private String designation;
     private LocalDate dateOfJoining;
     private LocalDate dateOfExit;
+    private LocalDate dateOfBirth;
     private String panNumber;
     private String aadhaarNumber;
     private String bankAccountNumber;
@@ -43,6 +44,7 @@ public class EmployeeResponse {
         this.designation = emp.getDesignation();
         this.dateOfJoining = emp.getDateOfJoining();
         this.dateOfExit = emp.getDateOfExit();
+        this.dateOfBirth = emp.getDateOfBirth();
         this.panNumber = emp.getPanNumber();
         this.aadhaarNumber = emp.getAadhaarNumber();
         this.bankAccountNumber = emp.getBankAccountNumber();
@@ -140,6 +142,14 @@ public class EmployeeResponse {
 
     public void setDateOfExit(LocalDate dateOfExit) {
         this.dateOfExit = dateOfExit;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 
     public String getPanNumber() {

@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -39,15 +40,77 @@ public class PayslipPdfService {
     private static final Color BORDER_COLOR = new Color(203, 213, 225); // Border Gray
     private static final Color NET_PAY_BG = new Color(238, 242, 255); // Indigo Light
 
+    public String generatePayslipPassword(Employee employee) {
+        if (employee == null) {
+            return "XXXX0101";
+        }
+        String firstName = employee.getFirstName();
+        StringBuilder namePart = new StringBuilder();
+        if (firstName != null) {
+            String upper = firstName.toUpperCase();
+            for (char c : upper.toCharArray()) {
+                if (Character.isLetter(c)) {
+                    namePart.append(c);
+                }
+                if (namePart.length() == 4) {
+                    break;
+                }
+            }
+        }
+        while (namePart.length() < 4) {
+            namePart.append('X');
+        }
+
+        String dobPart = "0101";
+        if (employee.getDateOfBirth() != null) {
+            dobPart = employee.getDateOfBirth().format(DateTimeFormatter.ofPattern("ddMM"));
+        }
+
+        return namePart.toString() + dobPart;
+    }
+
+    public byte[] generateEncryptedPayslipPdf(PayrollRecord record,
+                                             Employee employee,
+                                             SalaryStructure salaryStructure,
+                                             Company company) {
+        String password = generatePayslipPassword(employee);
+        return generatePayslipPdf(record, employee, salaryStructure, company, password);
+    }
+
+    public byte[] generateEncryptedPayslipPdf(PayrollRecord record,
+                                             Employee employee,
+                                             SalaryStructure salaryStructure,
+                                             Company company,
+                                             String password) {
+        return generatePayslipPdf(record, employee, salaryStructure, company, password);
+    }
+
     public byte[] generatePayslipPdf(PayrollRecord record,
                                      Employee employee,
                                      SalaryStructure salaryStructure,
                                      Company company) {
+        return generatePayslipPdf(record, employee, salaryStructure, company, null);
+    }
+
+    public byte[] generatePayslipPdf(PayrollRecord record,
+                                     Employee employee,
+                                     SalaryStructure salaryStructure,
+                                     Company company,
+                                     String password) {
         Document document = new Document(PageSize.A4, 36, 36, 36, 36);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
 
         try {
-            PdfWriter.getInstance(document, out);
+            PdfWriter writer = PdfWriter.getInstance(document, out);
+            if (password != null && !password.trim().isEmpty()) {
+                byte[] pwdBytes = password.trim().getBytes(StandardCharsets.UTF_8);
+                writer.setEncryption(
+                        pwdBytes,
+                        pwdBytes,
+                        PdfWriter.ALLOW_PRINTING | PdfWriter.ALLOW_COPY,
+                        PdfWriter.ENCRYPTION_AES_128
+                );
+            }
             document.open();
 
             // ---- Fonts ----
@@ -143,8 +206,12 @@ public class PayslipPdfService {
             addTableRow(salaryTable, "Special Allowance", CURRENCY_FORMAT.format(record.getSpecialAllowanceEarned()),
                     "TDS / Income Tax", CURRENCY_FORMAT.format(record.getTdsDeduction()), tableFont, tableFont);
 
-            // Row 4: Empty space row for balance
-            addTableRow(salaryTable, "", "", "", "", tableFont, tableFont);
+            // Row 4: Expense Reimbursement (Non-taxable)
+            String reimbLabel = (record.getReimbursements() != null && record.getReimbursements().compareTo(BigDecimal.ZERO) > 0)
+                    ? "Expense Reimbursements" : "";
+            String reimbAmount = (record.getReimbursements() != null && record.getReimbursements().compareTo(BigDecimal.ZERO) > 0)
+                    ? CURRENCY_FORMAT.format(record.getReimbursements()) : "";
+            addTableRow(salaryTable, reimbLabel, reimbAmount, "", "", tableFont, tableFont);
 
             // Total Gross & Total Deductions
             addTotalRow(salaryTable, "Gross Earnings", "INR " + CURRENCY_FORMAT.format(record.getGrossEarned()),

@@ -12,6 +12,7 @@ import AttendancePage from './pages/AttendancePage';
 import PayrollRunPage from './pages/PayrollRunPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import MyPayslipsPage from './pages/MyPayslipsPage';
+import LoanApprovalPage from './pages/LoanApprovalPage';
 
 function App() {
   return (
@@ -28,6 +29,8 @@ function App() {
           <Route path="/employees/:id" element={<EmployeeDetailPage />} />
           <Route path="/leaves" element={<LeaveHistoryPage />} />
           <Route path="/leaves/approvals" element={<LeaveApprovalPage />} />
+          <Route path="/loans" element={<LoanApprovalPage />} />
+          <Route path="/loans/approvals" element={<LoanApprovalPage />} />
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/payroll" element={<PayrollRunPage />} />
         </Route>

@@ -80,9 +80,27 @@ function LeaveApprovalPage() {
               <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
                 Dashboard
               </Link>
-              <Link to="/leaves" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                My Leaves
-              </Link>
+              {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN' || role === 'MANAGER') && (
+                <>
+                  <Link to="/employees" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                    Employees
+                  </Link>
+                  <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                    Payroll
+                  </Link>
+                  <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                    Attendance
+                  </Link>
+                  <Link to="/loans/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                    Loans
+                  </Link>
+                </>
+              )}
+              {role === 'EMPLOYEE' && (
+                <Link to="/leaves" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
+                  My Leaves
+                </Link>
+              )}
               <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
                 {role}
               </span>

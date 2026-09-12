@@ -70,6 +70,29 @@ payrollpro/
 
 ---
 
+## 🌟 Enterprise Features & Module Architecture
+
+PayrollPro is engineered for high-volume Indian enterprises (200–500 employees), providing a complete operational suite across payroll processing, banking, compliance, and employee lifecycle:
+
+| Category | Module | Capabilities |
+|---|---|---|
+| **Core Payroll** | **High-Speed Batch Engine** | Prorates gross pay, calculates EPF (12% capped at ₹1,800), Professional Tax (₹200), and TDS in <150ms for 200+ employees. |
+| | **3-Step Approval Workflow** | DRAFT $\rightarrow$ MANAGER_REVIEWED $\rightarrow$ APPROVED $\rightarrow$ LOCKED state machine preventing unauthorized changes. |
+| | **OpenPDF Payslip Engine** | Generates official PDF salary slips with earnings, statutory deductions, PAN, bank details, and net pay in words. |
+| **Banking & Payouts** | **Bank Disbursal Export** | One-click corporate batch payout files for **HDFC Bank CMS**, **ICICI Bank CIB**, and **Generic NEFT/RTGS CSV** with pre-flight IFSC/account validation. |
+| | **Variable Pay & Bonuses** | Add overtime pay (1.5x / 2.0x multipliers), performance incentives, festive bonuses, and ad-hoc deductions via bulk CSV. |
+| **Employee Lifecycle** | **Full & Final (F&F) Settlement** | Exit management computing **Earned Leave (EL) encashment**, statutory **Gratuity** (Payment of Gratuity Act 1972 for tenure $\ge 5$ years), notice shortfall recovery, and official settlement statements. |
+| | **Loans & Auto-EMI Deductions** | Emergency credit requests, admin approval, and automated monthly EMI deduction from payroll capped at 75% gross pay. |
+| **Statutory Compliance** | **EPFO ECR Text File Generator** | Official `#~#` delimited text file generation for direct upload to the EPFO Unified Member Portal. |
+| | **ESIC Return of Contribution** | Monthly contribution filings for employees with gross salary $\le$ ₹21,000 (0.75% EE + 3.25% ER). |
+| | **TDS & Form 12BB Declarations** | Old vs New Regime (Section 115BAC) selector with Section 80C, 80D, Section 24, and HRA rent proofs driving dynamic monthly TDS withholding. |
+| **Security & Delivery** | **Password-Protected Email Payslips** | Asynchronous `@Async` email distribution of PDF payslips encrypted with AES-128 using employee DOB/PAN passwords. |
+| | **Multi-Tenant Security** | Stateless JWT authentication with strict `TenantContext` isolation on all database queries. |
+| **Claims & AI** | **Expense Reimbursements** | Non-taxable business claim submission (receipt uploads), multi-tier approvals, and payroll reimbursable addition. |
+| | **AI Copilot (MCP Server)** | Model Context Protocol tools for real-time anomaly auditing, headcount statistics, and departmental compensation analytics. |
+
+---
+
 ## Environment Setup
 
 ### 1. Clone or navigate to the project
@@ -176,8 +199,21 @@ claude mcp add payrollpro node C:\Users\AKSHAY\Desktop\payrollpro\mcp-server\ind
 | `/api/attendance/upload-csv` | POST | Admin | Bulk attendance upload |
 | `/api/payroll/run?month=9&year=2026` | POST | Admin | Run batch payroll |
 | `/api/payroll/runs/{id}/review` | PUT | Manager | Review payroll |
-| `/api/payroll/runs/{id}/approve` | PUT | Super Admin | Approve payroll |
-| `/api/payslips/{id}/pdf` | GET | Employee/Admin | Download payslip PDF |
+| `/api/payroll/runs/{id}/approve` | PUT | Admin | Approve payroll |
+| `/api/payroll/runs/{id}/lock` | PUT | Admin | Lock payroll run |
+| `/api/payroll/runs/{id}/bank-export?format=HDFC_CMS` | GET | Admin | Batch bank disbursal export |
+| `/api/payroll/runs/{id}/send-payslips` | POST | Admin | Batch email password-protected payslips |
+| `/api/payroll/variable-pay/upload-csv` | POST | Admin | Bulk variable pay & bonus upload |
+| `/api/statutory/epfo-ecr?payrollRunId={id}` | GET | Admin | EPFO ECR `#~#` return file download |
+| `/api/statutory/esic-return?payrollRunId={id}` | GET | Admin | ESIC monthly contribution return |
+| `/api/settlements/calculate/{employeeId}` | POST | Admin | Full & Final (F&F) settlement preview |
+| `/api/settlements/{id}/statement-pdf` | GET | Admin | F&F official settlement PDF |
+| `/api/loans/apply` | POST | Employee | Apply for salary advance / loan |
+| `/api/loans/{id}/approve` | PUT | Admin | Approve loan with auto-EMI deduction |
+| `/api/tax/declaration` | POST | Employee | Form 12BB tax deduction declaration |
+| `/api/expenses/submit` | POST | Employee | Submit expense reimbursement claim |
+| `/api/expenses/{id}/approve` | PUT | Manager | Approve expense claim for payroll disbursal |
+| `/api/payslips/{id}/pdf` | GET | Employee/Admin | Download AES-128 encrypted payslip PDF |
 | `/api/leaves/request` | POST | Employee | Submit leave request |
 | `/api/leaves/pending` | GET | Manager | Pending leave approvals |
 

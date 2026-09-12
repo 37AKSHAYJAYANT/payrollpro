@@ -30,6 +30,7 @@ public class PayrollRecordResponse {
     private BigDecimal tdsDeduction;
     private BigDecimal totalDeductions;
     private BigDecimal netPay;
+    private BigDecimal reimbursements;
     private boolean isAnomaly;
 
     // ---- Constructors ----
@@ -55,6 +56,7 @@ public class PayrollRecordResponse {
         this.tdsDeduction = r.getTdsDeduction();
         this.totalDeductions = r.getTotalDeductions();
         this.netPay = r.getNetPay();
+        this.reimbursements = r.getReimbursements() != null ? r.getReimbursements() : BigDecimal.ZERO;
 
         // Flag anomaly if netPay <= 0 or zero payable days
         this.isAnomaly = (r.getNetPay().compareTo(BigDecimal.ZERO) <= 0) ||
@@ -263,6 +265,14 @@ public class PayrollRecordResponse {
 
     public void setNetPay(BigDecimal netPay) {
         this.netPay = netPay;
+    }
+
+    public BigDecimal getReimbursements() {
+        return reimbursements;
+    }
+
+    public void setReimbursements(BigDecimal reimbursements) {
+        this.reimbursements = reimbursements;
     }
 
     public boolean isAnomaly() {
