@@ -1,4 +1,4 @@
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 // ---- Core request helper ----
 async function apiRequest(endpoint, options = {}) {
@@ -144,7 +144,7 @@ export async function uploadAttendanceCsv(file, month, year) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`/api/attendance/upload-csv?month=${month}&year=${year}`, {
+  const response = await fetch(`${API_BASE}/api/attendance/upload-csv?month=${month}&year=${year}`, {
     method: 'POST',
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -216,7 +216,7 @@ export async function getPayslipsForEmployee(employeeId) {
 
 export async function downloadPayslipPdf(recordId, filename = 'payslip.pdf') {
   const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`/api/payslips/${recordId}/pdf`, {
+  const response = await fetch(`${API_BASE}/api/payslips/${recordId}/pdf`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
@@ -243,7 +243,7 @@ export async function validateBankDisbursal(runId) {
 
 export async function downloadBankDisbursal(runId, format = 'GENERIC_NEFT') {
   const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`/api/payroll/runs/${runId}/bank-export?format=${format}`, {
+  const response = await fetch(`${API_BASE}/api/payroll/runs/${runId}/bank-export?format=${format}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
@@ -302,7 +302,7 @@ export async function approveFnFSettlement(id) {
 
 export async function downloadFnFSettlementPdf(id, filename = 'Settlement_Statement.pdf') {
   const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`/api/settlements/${id}/statement-pdf`, {
+  const response = await fetch(`${API_BASE}/api/settlements/${id}/statement-pdf`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
@@ -366,7 +366,7 @@ export async function getStatutorySummary(payrollRunId) {
 
 export async function downloadEpfoEcrText(payrollRunId, filename = `EPFO_ECR_Run_${payrollRunId}.txt`) {
   const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`/api/statutory/epfo-ecr?payrollRunId=${payrollRunId}`, {
+  const response = await fetch(`${API_BASE}/api/statutory/epfo-ecr?payrollRunId=${payrollRunId}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
@@ -389,7 +389,7 @@ export async function downloadEpfoEcrText(payrollRunId, filename = `EPFO_ECR_Run
 
 export async function downloadEsicReturnCsv(payrollRunId, filename = `ESIC_Return_Run_${payrollRunId}.csv`) {
   const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`/api/statutory/esic-return?payrollRunId=${payrollRunId}`, {
+  const response = await fetch(`${API_BASE}/api/statutory/esic-return?payrollRunId=${payrollRunId}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     }
@@ -468,7 +468,7 @@ export async function uploadVariablePayCsv(file, month, year) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`/api/payroll/variable-pay/upload-csv?month=${month}&year=${year}`, {
+  const response = await fetch(`${API_BASE}/api/payroll/variable-pay/upload-csv?month=${month}&year=${year}`, {
     method: 'POST',
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {})
