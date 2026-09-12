@@ -10,6 +10,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.payrollpro.model.User;
+import com.payrollpro.repository.UserRepository;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -17,9 +20,11 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtUtil jwtUtil) {
+    public JwtAuthFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -34,21 +39,27 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 if (jwtUtil.validateToken(token)) {
                     String email = jwtUtil.extractEmail(token);
-                    String role = jwtUtil.extractRole(token);
-                    Long companyId = jwtUtil.extractCompanyId(token);
 
-                    // Set tenant context for downstream repository queries
-                    TenantContext.setCompanyId(companyId);
+                    // Re-validate against the DB on every request: identity, role, and
+                    // tenant are the server's source of truth, never trusted from the
+                    // token claims. A missing or deactivated user is rejected here, so
+                    // access is revoked immediately rather than at token expiry.
+                    User user = userRepository.findByEmail(email).orElse(null);
 
-                    // Build Spring Security authentication with role-based authority
-                    List<SimpleGrantedAuthority> authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + role)
-                    );
+                    if (user != null && Boolean.TRUE.equals(user.getIsActive())) {
+                        // Set tenant context for downstream repository queries
+                        TenantContext.setCompanyId(user.getCompanyId());
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(email, null, authorities);
+                        // Build Spring Security authentication with role-based authority
+                        List<SimpleGrantedAuthority> authorities = List.of(
+                                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+                        );
 
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(email, null, authorities);
+
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
                 }
             }
 

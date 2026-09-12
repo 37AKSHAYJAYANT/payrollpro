@@ -29,6 +29,7 @@ frontend/.vite/
 .idea/
 *.iml
 .vscode/
+.claude/
 *.suo
 *.ntvs*
 *.njsproj

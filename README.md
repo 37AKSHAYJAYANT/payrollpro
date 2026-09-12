@@ -99,13 +99,24 @@ spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=false
 
-# JWT
-jwt.secret=PayrollProSaaS2026SecretKeyMustBeAtLeast32Characters
+# JWT (secret comes from the JWT_SECRET env var; the fallback is dev-only)
+jwt.secret=${JWT_SECRET:local-dev-insecure-secret-change-me-0123456789}
 jwt.expiration-ms=86400000
 
 # Actuator
 management.endpoints.web.exposure.include=health,info
+
+# CORS (comma-separated allow-list of trusted browser origins)
+app.cors.allowed-origins=http://localhost:5173
 ```
+
+### 3. Production deployment (prod profile)
+The Docker image runs with `SPRING_PROFILES_ACTIVE=prod` (set in the `Dockerfile`), which disables the H2 console and **requires** a strong signing secret supplied at runtime. Set these environment variables on your host (e.g. the Render dashboard):
+
+| Variable | Purpose |
+|:---------|:--------|
+| `JWT_SECRET` | JWT signing key, **≥32 characters**. No default in prod — the app refuses to start without it, so a weak/known key can never leak in. |
+| `APP_CORS_ALLOWED_ORIGINS` | Comma-separated allow-list of trusted browser origins. Omit when the SPA is served same-origin (the default single-image deployment). |
 
 ---
 

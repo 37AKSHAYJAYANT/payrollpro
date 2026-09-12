@@ -27,6 +27,10 @@ WORKDIR /app
 COPY --from=backend-builder /app/backend/target/*.jar app.jar
 
 ENV PORT=8080
+# Always run the hardened production profile in the deployed image
+# (H2 console off, JWT_SECRET required, CORS from env). Provide JWT_SECRET
+# and APP_CORS_ALLOWED_ORIGINS via the platform's env-var settings.
+ENV SPRING_PROFILES_ACTIVE=prod
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-Xmx384m", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
