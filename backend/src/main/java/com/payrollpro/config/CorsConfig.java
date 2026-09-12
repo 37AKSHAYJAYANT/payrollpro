@@ -23,11 +23,14 @@ public class CorsConfig implements WebMvcConfigurer {
                 .filter(o -> !o.isEmpty())
                 .toArray(String[]::new);
 
+        if (origins.length == 0) {
+            origins = new String[] { "https://*.vercel.app", "https://*.onrender.com", "http://localhost:5173", "http://localhost:3000" };
+        }
+
         registry.addMapping("/api/**")
-                .allowedOrigins(origins)
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOriginPatterns(origins)
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                // Auth is a Bearer header, not cookies, so credentials mode is off.
                 .allowCredentials(false)
                 .maxAge(3600);
     }
