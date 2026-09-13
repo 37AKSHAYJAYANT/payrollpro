@@ -1,5 +1,6 @@
 package com.payrollpro.dto;
 
+import com.payrollpro.model.EmployeeStatus;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -42,6 +43,8 @@ public class EmployeeRequest {
     private String ifscCode;
 
     private String bankName;
+
+    private EmployeeStatus status;
 
     // ---- Constructors ----
 
@@ -163,5 +166,13 @@ public class EmployeeRequest {
 
     public void setBankName(String bankName) {
         this.bankName = bankName;
+    }
+
+    public EmployeeStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(EmployeeStatus status) {
+        this.status = status;
     }
 }

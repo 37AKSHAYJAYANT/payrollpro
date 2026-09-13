@@ -176,5 +176,8 @@ public class EmployeeService {
         emp.setBankAccountNumber(req.getBankAccountNumber());
         emp.setIfscCode(req.getIfscCode());
         emp.setBankName(req.getBankName());
+        if (req.getStatus() != null) {
+            emp.setStatus(req.getStatus());
+        }
     }
 }
