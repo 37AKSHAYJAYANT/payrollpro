@@ -12,6 +12,8 @@ public class LeaveBalanceResponse {
     private BigDecimal totalBalance;
     private BigDecimal used;
     private BigDecimal remaining;
+    private BigDecimal remainingDays;
+    private BigDecimal pendingDays;
 
     // ---- Constructors ----
 
@@ -28,6 +30,23 @@ public class LeaveBalanceResponse {
         this.totalBalance = totalBalance;
         this.used = used;
         this.remaining = remaining;
+        this.remainingDays = remaining;
+        this.pendingDays = BigDecimal.ZERO;
+    }
+
+    public LeaveBalanceResponse(Long id, Long leaveTypeId, String leaveTypeCode, String leaveTypeName,
+                                Integer year, BigDecimal totalBalance, BigDecimal used, BigDecimal remaining,
+                                BigDecimal pendingDays) {
+        this.id = id;
+        this.leaveTypeId = leaveTypeId;
+        this.leaveTypeCode = leaveTypeCode;
+        this.leaveTypeName = leaveTypeName;
+        this.year = year;
+        this.totalBalance = totalBalance;
+        this.used = used;
+        this.remaining = remaining;
+        this.remainingDays = remaining;
+        this.pendingDays = pendingDays != null ? pendingDays : BigDecimal.ZERO;
     }
 
     // ---- Getters and Setters ----
@@ -94,5 +113,24 @@ public class LeaveBalanceResponse {
 
     public void setRemaining(BigDecimal remaining) {
         this.remaining = remaining;
+        if (this.remainingDays == null) {
+            this.remainingDays = remaining;
+        }
+    }
+
+    public BigDecimal getRemainingDays() {
+        return remainingDays != null ? remainingDays : remaining;
+    }
+
+    public void setRemainingDays(BigDecimal remainingDays) {
+        this.remainingDays = remainingDays;
+    }
+
+    public BigDecimal getPendingDays() {
+        return pendingDays != null ? pendingDays : BigDecimal.ZERO;
+    }
+
+    public void setPendingDays(BigDecimal pendingDays) {
+        this.pendingDays = pendingDays;
     }
 }

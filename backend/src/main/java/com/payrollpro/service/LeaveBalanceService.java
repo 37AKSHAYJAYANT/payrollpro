@@ -2,8 +2,11 @@ package com.payrollpro.service;
 
 import com.payrollpro.dto.LeaveBalanceResponse;
 import com.payrollpro.model.LeaveBalance;
+import com.payrollpro.model.LeaveRequest;
+import com.payrollpro.model.LeaveRequestStatus;
 import com.payrollpro.model.LeaveType;
 import com.payrollpro.repository.LeaveBalanceRepository;
+import com.payrollpro.repository.LeaveRequestRepository;
 import com.payrollpro.repository.LeaveTypeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +22,14 @@ public class LeaveBalanceService {
 
     private final LeaveTypeRepository leaveTypeRepository;
     private final LeaveBalanceRepository leaveBalanceRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
 
     public LeaveBalanceService(LeaveTypeRepository leaveTypeRepository,
-                               LeaveBalanceRepository leaveBalanceRepository) {
+                               LeaveBalanceRepository leaveBalanceRepository,
+                               LeaveRequestRepository leaveRequestRepository) {
         this.leaveTypeRepository = leaveTypeRepository;
         this.leaveBalanceRepository = leaveBalanceRepository;
+        this.leaveRequestRepository = leaveRequestRepository;
     }
 
     @Transactional
@@ -69,10 +75,21 @@ public class LeaveBalanceService {
 
         List<LeaveBalance> balances = leaveBalanceRepository.findAllByCompanyIdAndEmployeeIdAndYear(companyId, employeeId, year);
 
+        // Compute pending leaves for this employee to inform the dashboard
+        List<LeaveRequest> pendingRequests = leaveRequestRepository.findAllByCompanyIdAndEmployeeIdAndStatusOrderByCreatedAtDesc(
+                companyId, employeeId, LeaveRequestStatus.PENDING);
+        Map<Long, BigDecimal> pendingMap = pendingRequests.stream()
+                .filter(r -> r.getFromDate() != null && r.getFromDate().getYear() == year)
+                .collect(Collectors.groupingBy(
+                        LeaveRequest::getLeaveTypeId,
+                        Collectors.reducing(BigDecimal.ZERO, LeaveRequest::getDays, BigDecimal::add)
+                ));
+
         return balances.stream().map(b -> {
             LeaveType t = typeMap.get(b.getLeaveTypeId());
             String code = t != null ? t.getCode() : "—";
             String name = t != null ? t.getName() : "—";
+            BigDecimal pending = pendingMap.getOrDefault(b.getLeaveTypeId(), BigDecimal.ZERO);
             return new LeaveBalanceResponse(
                     b.getId(),
                     b.getLeaveTypeId(),
@@ -81,7 +98,8 @@ public class LeaveBalanceService {
                     b.getYear(),
                     b.getTotalBalance(),
                     b.getUsed(),
-                    b.getRemaining()
+                    b.getRemaining(),
+                    pending
             );
         }).collect(Collectors.toList());
     }
