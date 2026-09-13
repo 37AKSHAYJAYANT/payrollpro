@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { getEmployees, getAllPayrollRuns, getPendingLeaveRequests, getPendingLoans } from '../services/api';
 import EmployeeDashboard from './EmployeeDashboard';
+import Navbar from '../components/Navbar';
 
 function DashboardPage() {
   const { role, logout } = useAuth();
@@ -68,56 +69,7 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top navigation bar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
-                P
-              </span>
-              <h1 className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</h1>
-              <span className="hidden sm:inline text-sm text-gray-400">|</span>
-              <span className="hidden sm:inline text-sm text-gray-500">Executive Console</span>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Link to="/employees" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Employees
-              </Link>
-              <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Payroll
-              </Link>
-              <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Attendance
-              </Link>
-              <Link to="/leaves/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition flex items-center gap-1">
-                Leaves
-                {pendingLeavesCount > 0 && (
-                  <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-bold leading-none">
-                    {pendingLeavesCount}
-                  </span>
-                )}
-              </Link>
-              <Link to="/loans/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition flex items-center gap-1">
-                Loans
-                {pendingLoansCount > 0 && (
-                  <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-full text-[10px] font-bold leading-none animate-pulse">
-                    {pendingLoansCount}
-                  </span>
-                )}
-              </Link>
-              <span className="inline-flex items-center px-2 py-0.5 sm:px-2.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
-                {role}
-              </span>
-              <button
-                onClick={handleLogout}
-                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar currentPage="Executive Console" pendingLeavesCount={pendingLeavesCount} pendingLoansCount={pendingLoansCount} />
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 import { getPendingLoans, getAllLoans, approveLoan, rejectLoan } from '../services/api';
 
 function LoanApprovalPage() {
@@ -69,43 +70,7 @@ function LoanApprovalPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="text-sm text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-700">Loan & Advance Approvals</span>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Dashboard
-              </Link>
-              <Link to="/employees" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Employees
-              </Link>
-              <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Payroll
-              </Link>
-              <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Attendance
-              </Link>
-              <Link to="/leaves/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Leaves
-              </Link>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                {role}
-              </span>
-              <button
-                onClick={() => { logout(); navigate('/login'); }}
-                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar currentPage="Loan & Advance Approvals" />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">

@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-table';
 import { getEmployees, createEmployee } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 
 function EmployeeListPage() {
   const [employees, setEmployees] = useState([]);
@@ -156,43 +157,7 @@ function EmployeeListPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <Link to="/dashboard" className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</Link>
-              <span className="hidden sm:inline text-sm text-gray-400">/</span>
-              <span className="hidden sm:inline text-sm font-medium text-gray-700">Employee Directory</span>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Link to="/dashboard" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Dashboard
-              </Link>
-              <Link to="/payroll" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Payroll
-              </Link>
-              <Link to="/attendance" className="hidden sm:inline text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Attendance
-              </Link>
-              <Link to="/leaves/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Leaves
-              </Link>
-              <Link to="/loans/approvals" className="text-xs sm:text-sm text-gray-600 hover:text-indigo-600 transition">
-                Loans
-              </Link>
-              <span className="px-2 sm:px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-medium bg-indigo-100 text-indigo-800">
-                {role}
-              </span>
-              <button
-                onClick={() => { logout(); navigate('/login'); }}
-                className="text-xs sm:text-sm text-gray-500 hover:text-red-600 transition"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar currentPage="Employee Directory" />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
