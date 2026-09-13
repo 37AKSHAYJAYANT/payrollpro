@@ -1,8 +1,11 @@
+import { downloadBlob } from '../utils/download';
+import { getAuthToken } from '../utils/formatters';
+
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 
 // ---- Core request helper ----
 async function apiRequest(endpoint, options = {}) {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
+  const token = getAuthToken();
 
   const headers = {
     'Content-Type': 'application/json',
@@ -27,6 +30,31 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   return response.json();
+}
+
+/**
+ * Universal authenticated binary file download helper.
+ * Eliminates duplicate fetch, header setup, and blob URL manipulation.
+ */
+export async function apiDownload(endpoint, defaultFilename = 'download') {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    let msg = `Failed to download file: HTTP ${response.status}`;
+    try {
+      const err = await response.json();
+      msg = err.message || err.error || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  downloadBlob(blob, defaultFilename);
 }
 
 // ---- Auth API ----
@@ -101,6 +129,10 @@ export async function saveSalaryStructure(employeeId, salaryData) {
     method: 'POST',
     body: JSON.stringify(salaryData)
   });
+}
+
+export async function previewSalaryStructure(annualCTC) {
+  return apiRequest(`/api/salary-structures/preview?annualCTC=${annualCTC}`);
 }
 
 // ---- Leave Management API ----
@@ -229,26 +261,7 @@ export async function getPayslipsForEmployee(employeeId) {
 }
 
 export async function downloadPayslipPdf(recordId, filename = 'payslip.pdf') {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`${API_BASE}/api/payslips/${recordId}/pdf`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download payslip: HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  return apiDownload(`/api/payslips/${recordId}/pdf`, filename);
 }
 
 export async function validateBankDisbursal(runId) {
@@ -256,33 +269,9 @@ export async function validateBankDisbursal(runId) {
 }
 
 export async function downloadBankDisbursal(runId, format = 'GENERIC_NEFT') {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`${API_BASE}/api/payroll/runs/${runId}/bank-export?format=${format}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-
-  if (!response.ok) {
-    let msg = `Failed to export bank file: HTTP ${response.status}`;
-    try {
-      const err = await response.json();
-      msg = err.message || msg;
-    } catch {}
-    throw new Error(msg);
-  }
-
-  const blob = await response.blob();
   const ext = format === 'HDFC_CMS' ? 'txt' : 'csv';
   const filename = `bank_disbursal_run_${runId}_${format.toLowerCase()}.${ext}`;
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  return apiDownload(`/api/payroll/runs/${runId}/bank-export?format=${format}`, filename);
 }
 
 // ---- Full & Final (F&F) Settlement API ----
@@ -315,26 +304,7 @@ export async function approveFnFSettlement(id) {
 }
 
 export async function downloadFnFSettlementPdf(id, filename = 'Settlement_Statement.pdf') {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`${API_BASE}/api/settlements/${id}/statement-pdf`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download settlement PDF: HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  return apiDownload(`/api/settlements/${id}/statement-pdf`, filename);
 }
 
 // ---- Employee Loans & Salary Advances API ----
@@ -379,49 +349,11 @@ export async function getStatutorySummary(payrollRunId) {
 }
 
 export async function downloadEpfoEcrText(payrollRunId, filename = `EPFO_ECR_Run_${payrollRunId}.txt`) {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`${API_BASE}/api/statutory/epfo-ecr?payrollRunId=${payrollRunId}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download EPFO ECR return: HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  return apiDownload(`/api/statutory/epfo-ecr?payrollRunId=${payrollRunId}`, filename);
 }
 
 export async function downloadEsicReturnCsv(payrollRunId, filename = `ESIC_Return_Run_${payrollRunId}.csv`) {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const response = await fetch(`${API_BASE}/api/statutory/esic-return?payrollRunId=${payrollRunId}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to download ESIC return CSV: HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
+  return apiDownload(`/api/statutory/esic-return?payrollRunId=${payrollRunId}`, filename);
 }
 
 // ---- Income Tax Declarations (Form 12BB & Regime) API ----

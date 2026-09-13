@@ -34,19 +34,22 @@ public class DataInitializer implements CommandLineRunner {
     private final SalaryStructureRepository salaryStructureRepository;
     private final PasswordEncoder passwordEncoder;
     private final com.payrollpro.service.LeaveBalanceService leaveBalanceService;
+    private final com.payrollpro.service.StatutoryRuleEngine statutoryRuleEngine;
 
     public DataInitializer(CompanyRepository companyRepository,
                            UserRepository userRepository,
                            EmployeeRepository employeeRepository,
                            SalaryStructureRepository salaryStructureRepository,
                            PasswordEncoder passwordEncoder,
-                           com.payrollpro.service.LeaveBalanceService leaveBalanceService) {
+                           com.payrollpro.service.LeaveBalanceService leaveBalanceService,
+                           com.payrollpro.service.StatutoryRuleEngine statutoryRuleEngine) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
         this.employeeRepository = employeeRepository;
         this.salaryStructureRepository = salaryStructureRepository;
         this.passwordEncoder = passwordEncoder;
         this.leaveBalanceService = leaveBalanceService;
+        this.statutoryRuleEngine = statutoryRuleEngine;
     }
 
     @Override
@@ -151,32 +154,16 @@ public class DataInitializer implements CommandLineRunner {
             employee = employeeRepository.save(employee);
             seededEmployees.add(employee);
 
-            // Calculate SalaryStructure
+            // Calculate SalaryStructure using centralized StatutoryRuleEngine
             long annualCtcValue = ctcMin + ((i % totalCtcSteps) * ctcStep);
             BigDecimal annualCTC = BigDecimal.valueOf(annualCtcValue).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal monthlyGross = annualCTC.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
-            BigDecimal basicSalary = monthlyGross.multiply(new BigDecimal("0.50")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal hra = basicSalary.multiply(new BigDecimal("0.40")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal specialAllowance = monthlyGross.subtract(basicSalary).subtract(hra).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal epfEmployee = basicSalary.multiply(new BigDecimal("0.12")).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal epfEmployer = basicSalary.multiply(new BigDecimal("0.12")).setScale(2, RoundingMode.HALF_UP);
             BigDecimal professionalTax = new BigDecimal("200.00");
             BigDecimal monthlyTds = annualCtcValue > 1000000L ? new BigDecimal("2500.00") : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
-            SalaryStructure salaryStructure = new SalaryStructure(
-                    companyId,
-                    employee.getId(),
-                    annualCTC,
-                    monthlyGross,
-                    basicSalary,
-                    hra,
-                    specialAllowance,
-                    epfEmployee,
-                    epfEmployer,
-                    professionalTax,
-                    monthlyTds,
-                    doj
-            );
+            SalaryStructure salaryStructure = statutoryRuleEngine.computeSalaryStructure(
+                    annualCTC, professionalTax, monthlyTds, doj);
+            salaryStructure.setCompanyId(companyId);
+            salaryStructure.setEmployeeId(employee.getId());
             seededStructures.add(salaryStructure);
         }
 

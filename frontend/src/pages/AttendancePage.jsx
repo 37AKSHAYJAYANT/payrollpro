@@ -8,6 +8,8 @@ import {
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import { downloadBlob } from '../utils/download';
+import { MONTH_NAMES } from '../utils/formatters';
 
 function AttendancePage() {
   const [attendances, setAttendances] = useState([]);
@@ -114,12 +116,7 @@ function AttendancePage() {
     const header = 'empCode,totalWorkingDays,presentDays,paidLeaves,unpaidLeaves\n';
     const sampleRows = employees.slice(0, 5).map((e) => `${e.empCode},26,24.0,2.0,0.0`).join('\n');
     const blob = new Blob([header + sampleRows], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance_template_${year}_${month}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `attendance_template_${year}_${month}.csv`);
   }
 
   return (
@@ -141,10 +138,7 @@ function AttendancePage() {
                 onChange={(e) => setMonth(parseInt(e.target.value, 10))}
                 className="w-full sm:w-auto px-3.5 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
               >
-                {[
-                  'January', 'February', 'March', 'April', 'May', 'June',
-                  'July', 'August', 'September', 'October', 'November', 'December'
-                ].map((name, idx) => (
+                {MONTH_NAMES.map((name, idx) => (
                   <option key={idx + 1} value={idx + 1}>
                     {name}
                   </option>

@@ -12,6 +12,15 @@ public class TenantContext {
         return currentCompanyId.get();
     }
 
+    public static Long getRequiredCompanyId() {
+        Long companyId = currentCompanyId.get();
+        if (companyId == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Tenant context missing");
+        }
+        return companyId;
+    }
+
     public static void clear() {
         currentCompanyId.remove();
     }

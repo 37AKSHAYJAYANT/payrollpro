@@ -37,11 +37,7 @@ public class VariablePayService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     @Transactional

@@ -44,20 +44,11 @@ public class LoanService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     private Long getAuthenticatedEmployeeId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
         if (user.getEmployeeId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User account is not linked to an employee record");
         }
@@ -159,19 +150,30 @@ public class LoanService {
 
     public List<LoanResponse> getAllLoans() {
         Long companyId = getRequiredCompanyId();
-        return loanRecordRepository.findAllByCompanyId(companyId).stream()
-                .map(loan -> {
-                    Employee emp = employeeRepository.findByCompanyIdAndId(companyId, loan.getEmployeeId()).orElse(null);
-                    return mapToResponse(loan, emp);
-                })
-                .collect(Collectors.toList());
+        List<LoanRecord> loans = loanRecordRepository.findAllByCompanyId(companyId);
+        return mapLoansWithEmployees(companyId, loans);
     }
 
     public List<LoanResponse> getPendingLoans() {
         Long companyId = getRequiredCompanyId();
-        return loanRecordRepository.findAllByCompanyIdAndStatus(companyId, LoanStatus.REQUESTED).stream()
+        List<LoanRecord> loans = loanRecordRepository.findAllByCompanyIdAndStatus(companyId, LoanStatus.REQUESTED);
+        return mapLoansWithEmployees(companyId, loans);
+    }
+
+    private List<LoanResponse> mapLoansWithEmployees(Long companyId, List<LoanRecord> loans) {
+        if (loans.isEmpty()) {
+            return Collections.emptyList();
+        }
+        java.util.Set<Long> empIds = loans.stream().map(LoanRecord::getEmployeeId).collect(Collectors.toSet());
+        java.util.Map<Long, Employee> empMap = employeeRepository.findByCompanyIdAndIdIn(companyId, empIds).stream()
+                .collect(Collectors.toMap(Employee::getId, java.util.function.Function.identity()));
+
+        return loans.stream()
                 .map(loan -> {
-                    Employee emp = employeeRepository.findByCompanyIdAndId(companyId, loan.getEmployeeId()).orElse(null);
+                    Employee emp = empMap.get(loan.getEmployeeId());
+                    if (emp == null) {
+                        emp = employeeRepository.findByCompanyIdAndId(companyId, loan.getEmployeeId()).orElse(null);
+                    }
                     return mapToResponse(loan, emp);
                 })
                 .collect(Collectors.toList());

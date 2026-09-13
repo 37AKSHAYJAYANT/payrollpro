@@ -85,20 +85,11 @@ public class PayrollService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     private User getAuthenticatedUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        return userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        return com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
     }
 
     @Transactional

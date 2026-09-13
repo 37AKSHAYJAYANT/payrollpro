@@ -8,6 +8,8 @@ import {
 import { getEmployees, createEmployee, updateEmployee, getDepartments } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import EmployeeFormModal from '../components/employee/EmployeeFormModal';
+import StatusBadge from '../components/common/StatusBadge';
 
 const departmentStyles = {
   Engineering: 'bg-indigo-50 text-indigo-700 border-indigo-200',
@@ -71,42 +73,7 @@ function EmployeeListPage() {
     'Engineering', 'Finance', 'HR', 'Marketing', 'Operations'
   ]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    department: 'Engineering',
-    designation: '',
-    dateOfJoining: new Date().toISOString().split('T')[0],
-    panNumber: '',
-    bankName: 'HDFC Bank',
-    bankAccountNumber: '',
-    ifscCode: ''
-  });
-
-  // Edit Employee modal state
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [editFormData, setEditFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    department: 'Engineering',
-    designation: '',
-    status: 'ACTIVE',
-    dateOfJoining: '',
-    dateOfBirth: '',
-    panNumber: '',
-    bankName: 'HDFC Bank',
-    bankAccountNumber: '',
-    ifscCode: ''
-  });
-  const [editFormError, setEditFormError] = useState('');
-  const [editSaving, setEditSaving] = useState(false);
   const [successToast, setSuccessToast] = useState('');
 
   const { role, logout } = useAuth();
@@ -114,39 +81,6 @@ function EmployeeListPage() {
 
   function handleOpenEditModal(emp) {
     setEditingEmployee(emp);
-    setEditFormError('');
-    setEditFormData({
-      firstName: emp.firstName || '',
-      lastName: emp.lastName || '',
-      email: emp.email || '',
-      phone: emp.phone || '',
-      department: emp.department || 'Engineering',
-      designation: emp.designation || '',
-      status: emp.status || 'ACTIVE',
-      dateOfJoining: emp.dateOfJoining || new Date().toISOString().split('T')[0],
-      dateOfBirth: emp.dateOfBirth || '',
-      panNumber: emp.panNumber || '',
-      bankName: emp.bankName || 'HDFC Bank',
-      bankAccountNumber: emp.bankAccountNumber || '',
-      ifscCode: emp.ifscCode || ''
-    });
-  }
-
-  async function handleEditSubmit(e) {
-    e.preventDefault();
-    setEditFormError('');
-    setEditSaving(true);
-    try {
-      await updateEmployee(editingEmployee.id, editFormData);
-      setEditingEmployee(null);
-      setSuccessToast(`Employee ${editFormData.firstName} ${editFormData.lastName} updated successfully!`);
-      setTimeout(() => setSuccessToast(''), 4000);
-      fetchEmployees(page, search, department, status, pageSize);
-    } catch (err) {
-      setEditFormError(err.message || 'Failed to update employee');
-    } finally {
-      setEditSaving(false);
-    }
   }
 
   async function fetchEmployees(currentPage = page, currentSearch = search, currentDept = department, currentStatus = status, currentSize = pageSize) {
@@ -222,34 +156,6 @@ function EmployeeListPage() {
 
   const activeFiltersCount = (department !== 'ALL' ? 1 : 0) + (status !== 'ALL' ? 1 : 0) + (search.trim() ? 1 : 0);
 
-  async function handleAddSubmit(e) {
-    e.preventDefault();
-    setFormError('');
-    setSaving(true);
-    try {
-      await createEmployee(formData);
-      setShowAddModal(false);
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        department: 'Engineering',
-        designation: '',
-        dateOfJoining: new Date().toISOString().split('T')[0],
-        panNumber: '',
-        bankName: 'HDFC Bank',
-        bankAccountNumber: '',
-        ifscCode: ''
-      });
-      fetchEmployees(0, search, department, status, pageSize);
-    } catch (err) {
-      setFormError(err.message || 'Failed to add employee');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   // TanStack table columns definition
   const columns = useMemo(
     () => [
@@ -310,20 +216,7 @@ function EmployeeListPage() {
       {
         header: 'Status',
         accessorKey: 'status',
-        cell: (info) => {
-          const statusVal = info.getValue();
-          const cfg = statusConfig[statusVal] || {
-            bg: 'bg-gray-100 text-gray-800 border-gray-200',
-            dot: 'bg-gray-400',
-            label: statusVal
-          };
-          return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cfg.bg}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-              {cfg.label}
-            </span>
-          );
-        }
+        cell: (info) => <StatusBadge status={info.getValue()} />
       },
       {
         header: 'Date of Joining',
@@ -715,386 +608,32 @@ function EmployeeListPage() {
         </div>
       </div>
 
-      {/* Add Employee Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <h2 className="text-xl font-bold text-gray-900">Add New Employee</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              >
-                &times;
-              </button>
-            </div>
+      {/* Reusable Add Employee Modal */}
+      <EmployeeFormModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        mode="create"
+        onSave={async (data) => {
+          await createEmployee(data);
+          setSuccessToast(`Employee ${data.firstName} ${data.lastName} created successfully!`);
+          setTimeout(() => setSuccessToast(''), 4000);
+          fetchEmployees(0, search, department, status, pageSize);
+        }}
+      />
 
-            {formError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Department *</label>
-                  <select
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Operations">Operations</option>
-                    <option value="HR">HR</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={formData.designation}
-                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date of Joining *</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.dateOfJoining}
-                    onChange={(e) => setFormData({ ...formData, dateOfJoining: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Statutory &amp; Banking</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">PAN Number</label>
-                    <input
-                      type="text"
-                      placeholder="ABCDE1234F"
-                      value={formData.panNumber}
-                      onChange={(e) => setFormData({ ...formData, panNumber: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name</label>
-                    <input
-                      type="text"
-                      value={formData.bankName}
-                      onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Bank Account Number</label>
-                    <input
-                      type="text"
-                      value={formData.bankAccountNumber}
-                      onChange={(e) => setFormData({ ...formData, bankAccountNumber: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code</label>
-                    <input
-                      type="text"
-                      placeholder="HDFC0001234"
-                      value={formData.ifscCode}
-                      onChange={(e) => setFormData({ ...formData, ifscCode: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
-                >
-                  {saving ? 'Adding...' : 'Add Employee'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Employee Modal */}
-      {editingEmployee && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center mb-5 border-b pb-3">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span>✏️ Edit Employee</span>
-                  <span className="font-mono text-sm px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold">
-                    {editingEmployee.empCode}
-                  </span>
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Update personal, departmental, and statutory details
-                </p>
-              </div>
-              <button
-                onClick={() => setEditingEmployee(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              >
-                &times;
-              </button>
-            </div>
-
-            {editFormError && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {editFormError}
-              </div>
-            )}
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.firstName}
-                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.lastName}
-                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                  <input
-                    type="text"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Department *</label>
-                  <select
-                    value={editFormData.department}
-                    onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Operations">Operations</option>
-                    <option value="HR">HR</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
-                  <input
-                    type="text"
-                    value={editFormData.designation}
-                    onChange={(e) => setEditFormData({ ...editFormData, designation: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Status *</label>
-                  <select
-                    value={editFormData.status}
-                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium"
-                  >
-                    <option value="ACTIVE">🟢 Active</option>
-                    <option value="ON_LEAVE">🟡 On Leave</option>
-                    <option value="EXITED">🔴 Exited</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date of Joining *</label>
-                  <input
-                    type="date"
-                    required
-                    value={editFormData.dateOfJoining}
-                    onChange={(e) => setEditFormData({ ...editFormData, dateOfJoining: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
-                  <input
-                    type="date"
-                    value={editFormData.dateOfBirth}
-                    onChange={(e) => setEditFormData({ ...editFormData, dateOfBirth: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-3 mt-3">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Statutory &amp; Banking</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">PAN Number</label>
-                    <input
-                      type="text"
-                      placeholder="ABCDE1234F"
-                      value={editFormData.panNumber}
-                      onChange={(e) => setEditFormData({ ...editFormData, panNumber: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Bank Name</label>
-                    <input
-                      type="text"
-                      value={editFormData.bankName}
-                      onChange={(e) => setEditFormData({ ...editFormData, bankName: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Bank Account Number</label>
-                    <input
-                      type="text"
-                      value={editFormData.bankAccountNumber}
-                      onChange={(e) => setEditFormData({ ...editFormData, bankAccountNumber: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">IFSC Code</label>
-                    <input
-                      type="text"
-                      placeholder="HDFC0001234"
-                      value={editFormData.ifscCode}
-                      onChange={(e) => setEditFormData({ ...editFormData, ifscCode: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setEditingEmployee(null)}
-                  className="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editSaving}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  {editSaving ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>Save Changes</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Reusable Edit Employee Modal */}
+      <EmployeeFormModal
+        isOpen={!!editingEmployee}
+        onClose={() => setEditingEmployee(null)}
+        mode="edit"
+        employee={editingEmployee}
+        onSave={async (data) => {
+          await updateEmployee(editingEmployee.id, data);
+          setSuccessToast(`Employee ${data.firstName} ${data.lastName} updated successfully!`);
+          setTimeout(() => setSuccessToast(''), 4000);
+          fetchEmployees(page, search, department, status, pageSize);
+        }}
+      />
     </div>
   );
 }

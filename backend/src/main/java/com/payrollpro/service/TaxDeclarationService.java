@@ -40,11 +40,7 @@ public class TaxDeclarationService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     /**
@@ -106,11 +102,22 @@ public class TaxDeclarationService {
     public List<TaxDeclarationResponse> getAllPendingDeclarations() {
         Long companyId = getRequiredCompanyId();
         List<TaxDeclaration> decls = taxDeclarationRepository.findAllByCompanyIdAndStatus(companyId, TaxDeclarationStatus.SUBMITTED);
+        if (decls.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        java.util.Set<Long> empIds = decls.stream().map(TaxDeclaration::getEmployeeId).collect(Collectors.toSet());
+        java.util.Map<Long, Employee> empMap = employeeRepository.findByCompanyIdAndIdIn(companyId, empIds).stream()
+                .collect(Collectors.toMap(Employee::getId, java.util.function.Function.identity()));
 
-        return decls.stream().map(d -> {
-            Employee emp = employeeRepository.findByCompanyIdAndId(companyId, d.getEmployeeId()).orElse(null);
-            return mapToResponse(d, emp);
-        }).collect(Collectors.toList());
+        return decls.stream()
+                .map(d -> {
+                    Employee emp = empMap.get(d.getEmployeeId());
+                    if (emp == null) {
+                        emp = employeeRepository.findByCompanyIdAndId(companyId, d.getEmployeeId()).orElse(null);
+                    }
+                    return mapToResponse(d, emp);
+                })
+                .collect(Collectors.toList());
     }
 
     public TaxDeclarationResponse verifyDeclaration(Long id, TaxDeclarationStatus status, String remarks) {

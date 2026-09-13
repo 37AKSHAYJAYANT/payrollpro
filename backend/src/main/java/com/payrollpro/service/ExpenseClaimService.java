@@ -41,20 +41,11 @@ public class ExpenseClaimService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     private Long getAuthenticatedEmployeeId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
         if (user.getEmployeeId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User account is not linked to an employee record");
         }
@@ -129,21 +120,26 @@ public class ExpenseClaimService {
         Long companyId = getRequiredCompanyId();
         List<ExpenseClaim> claims = expenseClaimRepository.findAllByCompanyIdAndStatusOrderByCreatedAtDesc(
                 companyId, ExpenseClaimStatus.PENDING);
-
-        Map<Long, Employee> employeeMap = employeeRepository.findAllByCompanyId(companyId).stream()
-                .collect(Collectors.toMap(Employee::getId, e -> e));
-
-        return claims.stream()
-                .map(claim -> new ExpenseClaimResponse(claim, employeeMap.get(claim.getEmployeeId())))
-                .collect(Collectors.toList());
+        return mapClaimsWithEmployees(companyId, claims);
     }
 
     public List<ExpenseClaimResponse> getAllClaims() {
         Long companyId = getRequiredCompanyId();
         List<ExpenseClaim> claims = expenseClaimRepository.findAllByCompanyIdOrderByCreatedAtDesc(companyId);
+        return mapClaimsWithEmployees(companyId, claims);
+    }
 
-        Map<Long, Employee> employeeMap = employeeRepository.findAllByCompanyId(companyId).stream()
-                .collect(Collectors.toMap(Employee::getId, e -> e));
+    private List<ExpenseClaimResponse> mapClaimsWithEmployees(Long companyId, List<ExpenseClaim> claims) {
+        if (claims.isEmpty()) {
+            return Collections.emptyList();
+        }
+        java.util.Set<Long> empIds = claims.stream().map(ExpenseClaim::getEmployeeId).collect(Collectors.toSet());
+        List<Employee> emps = employeeRepository.findByCompanyIdAndIdIn(companyId, empIds);
+        if (emps == null || emps.isEmpty()) {
+            emps = employeeRepository.findAllByCompanyId(companyId);
+        }
+        Map<Long, Employee> employeeMap = (emps != null ? emps : Collections.<Employee>emptyList()).stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e, (e1, e2) -> e1));
 
         return claims.stream()
                 .map(claim -> new ExpenseClaimResponse(claim, employeeMap.get(claim.getEmployeeId())))

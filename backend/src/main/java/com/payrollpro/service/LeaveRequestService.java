@@ -58,20 +58,11 @@ public class LeaveRequestService {
     }
 
     private Long getRequiredCompanyId() {
-        Long companyId = TenantContext.getCompanyId();
-        if (companyId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Tenant context missing");
-        }
-        return companyId;
+        return TenantContext.getRequiredCompanyId();
     }
 
     private User getAuthenticatedUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        return userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        return com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
     }
 
     private java.util.Optional<Employee> findCurrentEmployee(User user, Long companyId) {
@@ -176,9 +167,17 @@ public class LeaveRequestService {
     public List<LeaveRequestResponse> getPendingRequests() {
         Long companyId = getRequiredCompanyId();
         List<LeaveRequest> pending = leaveRequestRepository.findAllByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, LeaveRequestStatus.PENDING);
+        if (pending.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-        Map<Long, Employee> empMap = employeeRepository.findAllByCompanyId(companyId).stream()
-                .collect(Collectors.toMap(Employee::getId, e -> e));
+        java.util.Set<Long> empIds = pending.stream().map(LeaveRequest::getEmployeeId).collect(Collectors.toSet());
+        List<Employee> emps = employeeRepository.findByCompanyIdAndIdIn(companyId, empIds);
+        if (emps == null || emps.isEmpty()) {
+            emps = employeeRepository.findAllByCompanyId(companyId);
+        }
+        Map<Long, Employee> empMap = (emps != null ? emps : Collections.<Employee>emptyList()).stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e, (e1, e2) -> e1));
         Map<Long, LeaveType> typeMap = leaveTypeRepository.findAllByCompanyId(companyId).stream()
                 .collect(Collectors.toMap(LeaveType::getId, t -> t));
 
