@@ -318,6 +318,11 @@ export default function AiCopilot() {
     };
   }
 
+  // Hide Copilot for EMPLOYEE users
+  if (role === 'EMPLOYEE') {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Trigger Button */}

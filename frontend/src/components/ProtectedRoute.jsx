@@ -29,7 +29,7 @@ function ProtectedRoute({ allowedRoles }) {
   return (
     <>
       <Outlet />
-      <AiCopilot />
+      {role !== 'EMPLOYEE' && <AiCopilot />}
     </>
   );
 }
