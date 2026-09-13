@@ -1,7 +1,8 @@
 import { downloadBlob } from '../utils/download';
 import { getAuthToken } from '../utils/formatters';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+// Relative URL ensures requests always route through Vite dev proxy locally and Vercel rewrites in production
+const API_BASE = '';
 
 // ---- Core request helper ----
 async function apiRequest(endpoint, options = {}) {
