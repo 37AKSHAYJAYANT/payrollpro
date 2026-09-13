@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://payrollpro-1-fj3d.onrender.com/api/$1"
+      "destination": "http://13.126.189.75/api/$1"
     },
     {
       "source": "/(.*)",
