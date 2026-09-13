@@ -20,6 +20,12 @@ async function apiRequest(endpoint, options = {}) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      try {
+        localStorage.removeItem('payrollpro_auth');
+        window.dispatchEvent(new Event('payrollpro_auth_logout'));
+      } catch {}
+    }
     let errorMessage = `API error: ${response.status}`;
     try {
       const errorData = await response.json();

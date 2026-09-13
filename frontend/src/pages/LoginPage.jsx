@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { loginApi } from '../services/api';
@@ -8,8 +8,19 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated, role } = useAuth();
   const navigate = useNavigate();
+
+  // If already authenticated, redirect to appropriate dashboard immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (role === 'EMPLOYEE') {
+        navigate('/employee/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, role, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -19,7 +30,11 @@ function LoginPage() {
     try {
       const data = await loginApi(email, password);
       login(data);
-      navigate('/dashboard');
+      if (data.role === 'EMPLOYEE') {
+        navigate('/employee/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

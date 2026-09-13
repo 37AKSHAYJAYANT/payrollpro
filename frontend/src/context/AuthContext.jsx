@@ -2,12 +2,62 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-const initialState = {
-  token: null,
-  role: null,
-  companyId: null,
-  isAuthenticated: false
-};
+/**
+ * Safely parse and validate stored credentials from localStorage synchronously.
+ */
+function getStoredAuth() {
+  try {
+    const stored = localStorage.getItem('payrollpro_auth');
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (!parsed || !parsed.token) return null;
+
+    // Check JWT expiry if valid JWT format
+    const tokenParts = parsed.token.split('.');
+    if (tokenParts.length === 3) {
+      try {
+        const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          localStorage.removeItem('payrollpro_auth');
+          return null;
+        }
+      } catch {
+        // If decoding claims fails, keep token and let backend validate
+      }
+    }
+
+    return parsed;
+  } catch {
+    try {
+      localStorage.removeItem('payrollpro_auth');
+    } catch {}
+    return null;
+  }
+}
+
+/**
+ * Synchronous initial state factory to ensure AuthContext is fully hydrated
+ * before the very first render, preventing premature redirects to /login on refresh.
+ */
+function getInitialState() {
+  const stored = getStoredAuth();
+  if (stored) {
+    return {
+      token: stored.token,
+      role: stored.role,
+      companyId: stored.companyId,
+      isAuthenticated: true,
+      initialized: true
+    };
+  }
+  return {
+    token: null,
+    role: null,
+    companyId: null,
+    isAuthenticated: false,
+    initialized: true
+  };
+}
 
 function authReducer(state, action) {
   switch (action.type) {
@@ -16,31 +66,52 @@ function authReducer(state, action) {
         token: action.payload.token,
         role: action.payload.role,
         companyId: action.payload.companyId,
-        isAuthenticated: true
+        isAuthenticated: true,
+        initialized: true
       };
     case 'LOGOUT':
-      return { ...initialState };
+      return {
+        token: null,
+        role: null,
+        companyId: null,
+        isAuthenticated: false,
+        initialized: true
+      };
     default:
       return state;
   }
 }
 
 export function AuthProvider({ children }) {
-  const [state, dispatch] = useReducer(authReducer, initialState);
+  const [state, dispatch] = useReducer(authReducer, undefined, getInitialState);
 
-  // Hydrate from localStorage on mount
+  // Synchronize auth state across tabs and handle logout events triggered on 401
   useEffect(() => {
-    const stored = localStorage.getItem('payrollpro_auth');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (parsed.token) {
-          dispatch({ type: 'LOGIN', payload: parsed });
+    function handleLogoutEvent() {
+      dispatch({ type: 'LOGOUT' });
+    }
+
+    function handleStorage(e) {
+      if (e.key === 'payrollpro_auth') {
+        if (!e.newValue) {
+          dispatch({ type: 'LOGOUT' });
+        } else {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed && parsed.token) {
+              dispatch({ type: 'LOGIN', payload: parsed });
+            }
+          } catch {}
         }
-      } catch {
-        localStorage.removeItem('payrollpro_auth');
       }
     }
+
+    window.addEventListener('payrollpro_auth_logout', handleLogoutEvent);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('payrollpro_auth_logout', handleLogoutEvent);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   function login(authData) {
@@ -49,12 +120,18 @@ export function AuthProvider({ children }) {
       role: authData.role,
       companyId: authData.companyId
     };
-    localStorage.setItem('payrollpro_auth', JSON.stringify(payload));
+    try {
+      localStorage.setItem('payrollpro_auth', JSON.stringify(payload));
+    } catch (err) {
+      console.error('Failed to save auth state to localStorage', err);
+    }
     dispatch({ type: 'LOGIN', payload });
   }
 
   function logout() {
-    localStorage.removeItem('payrollpro_auth');
+    try {
+      localStorage.removeItem('payrollpro_auth');
+    } catch {}
     dispatch({ type: 'LOGOUT' });
   }
 

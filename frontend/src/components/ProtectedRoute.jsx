@@ -3,7 +3,16 @@ import { useAuth } from '../context/AuthContext';
 import AiCopilot from './AiCopilot';
 
 function ProtectedRoute({ allowedRoles }) {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, initialized } = useAuth();
+
+  // Guard while auth state is resolving (if applicable)
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -35,4 +44,3 @@ function ProtectedRoute({ allowedRoles }) {
 }
 
 export default ProtectedRoute;
-
