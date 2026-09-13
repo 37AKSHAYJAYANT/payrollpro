@@ -1,7 +1,7 @@
 # ==============================================================================
 # Multi-Stage Dockerfile for PayrollPro SaaS (100% Free Cloud Deployment)
 # Packages React 18 Frontend + Spring Boot Backend into a Single Optimized Image
-# Compatible with Render, Koyeb, Railway, Fly.io
+# Compatible with AWS EC2, Docker, Koyeb, Railway
 # ==============================================================================
 
 # Stage 1: Build Frontend

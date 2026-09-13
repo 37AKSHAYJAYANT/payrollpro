@@ -24,7 +24,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 .toArray(String[]::new);
 
         if (origins.length == 0) {
-            origins = new String[] { "https://*.vercel.app", "https://*.onrender.com", "http://localhost:5173", "http://localhost:3000" };
+            origins = new String[] { "https://*.vercel.app", "http://localhost:5173", "http://localhost:3000" };
         }
 
         registry.addMapping("/api/**")

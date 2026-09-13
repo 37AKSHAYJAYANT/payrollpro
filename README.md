@@ -134,7 +134,7 @@ app.cors.allowed-origins=http://localhost:5173
 ```
 
 ### 3. Production deployment (prod profile)
-The Docker image runs with `SPRING_PROFILES_ACTIVE=prod` (set in the `Dockerfile`), which disables the H2 console and **requires** a strong signing secret supplied at runtime. Set these environment variables on your host (e.g. the Render dashboard):
+The Docker image runs with `SPRING_PROFILES_ACTIVE=prod` (set in the `Dockerfile`), which disables the H2 console and **requires** a strong signing secret supplied at runtime. Set these environment variables on your host (e.g. systemd/Docker environment on your EC2 host):
 
 | Variable | Purpose |
 |:---------|:--------|
