@@ -160,6 +160,10 @@ export async function getPendingLeaveRequests() {
   return apiRequest('/api/leaves/pending');
 }
 
+export async function getAllLeaveRequests() {
+  return apiRequest('/api/leaves/all');
+}
+
 export async function approveLeave(id, remarks = '') {
   return apiRequest(`/api/leaves/${id}/approve`, {
     method: 'PUT',

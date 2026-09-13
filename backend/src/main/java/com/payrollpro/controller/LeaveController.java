@@ -83,6 +83,12 @@ public class LeaveController {
         return ResponseEntity.ok(leaveRequestService.getPendingRequests());
     }
 
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('MANAGER', 'COMPANY_ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<LeaveRequestResponse>> getAllCompanyRequests() {
+        return ResponseEntity.ok(leaveRequestService.getAllCompanyRequests());
+    }
+
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('MANAGER', 'COMPANY_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<LeaveRequestResponse> approveLeave(

@@ -186,6 +186,28 @@ public class LeaveRequestService {
                 .collect(Collectors.toList());
     }
 
+    public List<LeaveRequestResponse> getAllCompanyRequests() {
+        Long companyId = getRequiredCompanyId();
+        List<LeaveRequest> allRequests = leaveRequestRepository.findAllByCompanyIdOrderByCreatedAtDesc(companyId);
+        if (allRequests.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        java.util.Set<Long> empIds = allRequests.stream().map(LeaveRequest::getEmployeeId).collect(Collectors.toSet());
+        List<Employee> emps = employeeRepository.findByCompanyIdAndIdIn(companyId, empIds);
+        if (emps == null || emps.isEmpty()) {
+            emps = employeeRepository.findAllByCompanyId(companyId);
+        }
+        Map<Long, Employee> empMap = (emps != null ? emps : Collections.<Employee>emptyList()).stream()
+                .collect(Collectors.toMap(Employee::getId, e -> e, (e1, e2) -> e1));
+        Map<Long, LeaveType> typeMap = leaveTypeRepository.findAllByCompanyId(companyId).stream()
+                .collect(Collectors.toMap(LeaveType::getId, t -> t));
+
+        return allRequests.stream()
+                .map(r -> mapToResponse(r, empMap.get(r.getEmployeeId()), typeMap.get(r.getLeaveTypeId())))
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public LeaveRequestResponse approveLeave(Long id, LeaveApprovalRequest approvalRequest) {
         Long companyId = getRequiredCompanyId();

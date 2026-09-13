@@ -14,6 +14,8 @@ import java.util.Optional;
 @Repository
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
 
+    List<LeaveRequest> findAllByCompanyIdOrderByCreatedAtDesc(Long companyId);
+
     List<LeaveRequest> findAllByCompanyIdAndEmployeeIdOrderByCreatedAtDesc(Long companyId, Long employeeId);
 
     List<LeaveRequest> findAllByCompanyIdAndStatusOrderByCreatedAtDesc(Long companyId, LeaveRequestStatus status);
