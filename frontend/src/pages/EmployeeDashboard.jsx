@@ -273,31 +273,56 @@ function EmployeeDashboard() {
             <div>
               <div className="flex justify-between items-center text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 <span>Leave Balances</span>
-                <Link to="/leaves" className="text-indigo-600 lowercase font-medium hover:underline text-xs">
-                  request leave
+                <Link to="/leaves" className="text-indigo-600 font-semibold hover:underline text-xs">
+                  Request Leave &rarr;
                 </Link>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-3 gap-2.5 text-center">
                 {balances && balances.length > 0 ? (
-                  balances.map((b) => (
-                    <div key={b.leaveTypeCode || b.id} className="p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                      <div className="text-xs font-bold text-gray-600">{b.leaveTypeCode || 'Leave'}</div>
-                      <div className="text-xl font-extrabold text-indigo-600 mt-1">
-                        {parseFloat(b.remainingDays || 0).toFixed(1)}
+                  balances.map((b) => {
+                    const remainingVal = Number(b.remaining != null ? b.remaining : (b.remainingDays != null ? b.remainingDays : 0));
+                    const totalVal = Number(b.totalBalance != null ? b.totalBalance : 0);
+                    const usedVal = Number(b.used != null ? b.used : 0);
+                    const pendingVal = Number(b.pendingDays || 0);
+
+                    const badgeColors = {
+                      CL: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                      SL: 'bg-rose-50 text-rose-800 border-rose-200',
+                      EL: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                    };
+                    const colorStyle = badgeColors[b.leaveTypeCode] || 'bg-gray-50 text-gray-800 border-gray-200';
+
+                    return (
+                      <div key={b.leaveTypeCode || b.id} className={`p-3 rounded-xl border ${colorStyle} flex flex-col justify-between transition hover:shadow-xs`}>
+                        <div>
+                          <div className="text-xs font-bold uppercase tracking-wide">{b.leaveTypeCode || 'Leave'}</div>
+                          <div className="text-2xl font-black text-gray-900 mt-1">
+                            {remainingVal.toFixed(1)}
+                          </div>
+                          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                            Days Left
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-1.5 border-t border-gray-200/60 text-[10px] text-gray-500 space-y-0.5">
+                          <div><span className="font-semibold text-gray-700">{usedVal}</span> of {totalVal} used</div>
+                          {pendingVal > 0 && (
+                            <div className="text-amber-600 font-medium">({pendingVal} pending)</div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-gray-400">Available</div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <div className="col-span-3 text-xs text-gray-400 py-3">
-                    Balances: CL (12), SL (6), EL (15)
+                  <div className="col-span-3 text-center py-6 text-xs text-gray-400">
+                    Loading leave allocations...
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-gray-100 text-right text-xs">
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+              <span className="text-gray-400">Annual Quota Year: {new Date().getFullYear()}</span>
               <Link to="/leaves" className="text-emerald-600 font-semibold hover:underline">
                 Apply for New Leave →
               </Link>
