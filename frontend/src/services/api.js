@@ -45,12 +45,26 @@ export async function registerApi(companyName, adminEmail, password) {
 }
 
 // ---- Employee API ----
-export async function getEmployees(page = 0, size = 20, search = '') {
+export async function getEmployees(page = 0, size = 20, search = '', department = '', status = '') {
   let url = `/api/employees?page=${page}&size=${size}`;
   if (search) {
     url += `&search=${encodeURIComponent(search)}`;
   }
+  if (department && department !== 'ALL') {
+    url += `&department=${encodeURIComponent(department)}`;
+  }
+  if (status && status !== 'ALL') {
+    url += `&status=${encodeURIComponent(status)}`;
+  }
   return apiRequest(url);
+}
+
+export async function getDepartments() {
+  try {
+    return await apiRequest('/api/employees/departments');
+  } catch {
+    return ['Engineering', 'Finance', 'HR', 'Marketing', 'Operations'];
+  }
 }
 
 export async function getEmployeeById(id) {

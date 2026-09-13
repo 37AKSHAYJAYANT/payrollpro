@@ -41,12 +41,29 @@ public class EmployeeService {
     }
 
     public PageResponse<EmployeeResponse> getEmployees(int page, int size, String search) {
+        return getEmployees(page, size, search, null, null);
+    }
+
+    public PageResponse<EmployeeResponse> getEmployees(int page, int size, String search, String department, String status) {
         Long companyId = getRequiredCompanyId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "empCode"));
 
+        EmployeeStatus employeeStatus = null;
+        if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("ALL")) {
+            try {
+                employeeStatus = EmployeeStatus.valueOf(status.trim().toUpperCase());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
+        String deptFilter = (department != null && !department.trim().isEmpty() && !department.equalsIgnoreCase("ALL"))
+                ? department.trim() : null;
+
+        String searchFilter = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+
         Page<Employee> employeePage;
-        if (search != null && !search.trim().isEmpty()) {
-            employeePage = employeeRepository.searchEmployees(companyId, search.trim(), pageable);
+        if (searchFilter != null || deptFilter != null || employeeStatus != null) {
+            employeePage = employeeRepository.filterEmployees(companyId, searchFilter, deptFilter, employeeStatus, pageable);
         } else {
             employeePage = employeeRepository.findAllByCompanyId(companyId, pageable);
         }
@@ -63,6 +80,11 @@ public class EmployeeService {
                 employeePage.getTotalPages(),
                 employeePage.isLast()
         );
+    }
+
+    public List<String> getDistinctDepartments() {
+        Long companyId = getRequiredCompanyId();
+        return employeeRepository.findDistinctDepartmentsByCompanyId(companyId);
     }
 
     public EmployeeResponse getEmployeeById(Long id) {

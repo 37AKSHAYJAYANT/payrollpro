@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
@@ -33,8 +35,16 @@ public class EmployeeController {
     public ResponseEntity<PageResponse<EmployeeResponse>> getEmployees(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(employeeService.getEmployees(page, size, search));
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String department,
+            @RequestParam(required = false) String status) {
+        return ResponseEntity.ok(employeeService.getEmployees(page, size, search, department, status));
+    }
+
+    @GetMapping("/departments")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'MANAGER', 'SUPER_ADMIN')")
+    public ResponseEntity<List<String>> getDepartments() {
+        return ResponseEntity.ok(employeeService.getDistinctDepartments());
     }
 
     @GetMapping("/{id}")
