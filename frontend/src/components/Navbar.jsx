@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
  *  - pendingLoansCount: number (optional, for badge)
  */
 function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) {
-  const { role, logout } = useAuth();
+  const { role, companyName, email, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -43,7 +43,7 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
     <nav className="bg-white shadow-sm border-b border-gray-200 relative z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Left: Logo + breadcrumb */}
+          {/* Left: Logo + breadcrumb + Company name */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <Link to="/dashboard" className="flex items-center space-x-2 shrink-0">
               <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
@@ -51,6 +51,11 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
               </span>
               <span className="text-lg sm:text-xl font-bold text-indigo-600">PayrollPro</span>
             </Link>
+            {companyName && (
+              <span className="hidden lg:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-200 max-w-[160px] truncate" title={companyName}>
+                🏢 {companyName}
+              </span>
+            )}
             {currentPage && (
               <>
                 <span className="hidden sm:inline text-sm text-gray-400">/</span>
@@ -62,7 +67,7 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
           </div>
 
           {/* Right: Desktop nav links (hidden on mobile) */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
             {navLinks.map((link) => (
               <Link
                 key={link.to}
@@ -77,12 +82,24 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
                 )}
               </Link>
             ))}
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-              {role}
-            </span>
+
+            <Link
+              to="/register"
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition"
+              title="Create new company workspace"
+            >
+              + New Company
+            </Link>
+
+            <div className="flex items-center gap-1.5 text-right">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800" title={email || ''}>
+                {email ? `${email.split('@')[0]} (${role})` : role}
+              </span>
+            </div>
+
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-red-600 transition"
+              className="text-xs font-medium text-gray-500 hover:text-red-600 transition"
             >
               Sign Out
             </button>
@@ -118,8 +135,13 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 shadow-lg">
           <div className="px-4 py-3 space-y-1">
+            {companyName && (
+              <div className="px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 rounded-lg mb-2">
+                🏢 {companyName} {email ? `(${email})` : ''}
+              </div>
+            )}
             {currentPage && (
-              <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 {currentPage}
               </div>
             )}
@@ -138,6 +160,14 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
                 )}
               </Link>
             ))}
+            <Link
+              to="/register"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition"
+            >
+              <span>+ Register New Company</span>
+              <span className="text-xs">0 Data</span>
+            </Link>
             <div className="border-t border-gray-100 pt-2 mt-2">
               <button
                 onClick={() => {

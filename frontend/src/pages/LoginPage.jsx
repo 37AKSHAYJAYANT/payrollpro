@@ -102,16 +102,32 @@ function LoginPage() {
           </form>
 
           {/* Registration link & Demo credentials hint */}
-          <div className="mt-6 pt-4 border-t border-gray-100 space-y-2 text-center">
-            <p className="text-xs text-gray-500">
-              New to PayrollPro?{' '}
-              <Link to="/register" className="font-semibold text-indigo-600 hover:underline">
-                Register your company
+          <div className="mt-6 pt-4 border-t border-gray-100 space-y-3 text-center">
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <span className="font-semibold">Starting fresh?</span>
+              <Link to="/register" className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition shadow-xs">
+                Register New Company (0 Data) →
               </Link>
-            </p>
-            <p className="text-xs text-gray-400">
-              Demo Admin: hr@democompany.com / hr123 | Employee: emp001@democompany.com / emp123
-            </p>
+            </div>
+
+            <div className="text-xs text-gray-500 pt-1">
+              <span>Quick Demo Sign-In: </span>
+              <button
+                type="button"
+                onClick={() => { setEmail('hr@democompany.com'); setPassword('hr123'); }}
+                className="text-indigo-600 hover:underline font-semibold ml-1 mr-2"
+              >
+                HR Admin Demo
+              </button>
+              •
+              <button
+                type="button"
+                onClick={() => { setEmail('emp001@democompany.com'); setPassword('emp123'); }}
+                className="text-indigo-600 hover:underline font-semibold ml-2"
+              >
+                Employee Demo
+              </button>
+            </div>
           </div>
         </div>
       </div>

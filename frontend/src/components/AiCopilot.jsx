@@ -162,7 +162,7 @@ export default function AiCopilot() {
           `* **Records Inspected:** ${records.length} employees\n` +
           `* **Total Anomalies Detected:** **${anomalies.length}**\n\n` +
           (anomalies.length === 0
-            ? '✅ **Clean Audit:** All 200 payroll records conform to statutory compliance with no critical anomalies detected!'
+            ? `✅ **Clean Audit:** All ${records.length} payroll records conform to statutory compliance with no critical anomalies detected!`
             : anomalies.map((a, i) => `**${i + 1}. [${a.severity}]** \`${a.empCode}\` — ${a.name}\n   • ${a.issue}`).join('\n\n')) +
           `\n\n💡 *Recommendation:* ${anomalies.some(a => a.severity === 'CRITICAL') ? 'Address CRITICAL items before approving the batch.' : 'Proceed to next workflow stage.'}`,
         timestamp,
@@ -188,7 +188,7 @@ export default function AiCopilot() {
         sender: 'copilot',
         text: `### 📊 Monthly Payroll Summary (${r.month}/${r.year})\n\n` +
           `* **Status:** \`${r.status}\`\n` +
-          `* **Active Headcount Processed:** ${r.employeeCount || 200} employees\n` +
+          `* **Active Headcount Processed:** ${r.employeeCount || records.length || 0} employees\n` +
           `* **Total Gross Earnings:** **₹${Number(r.totalGrossPay || 0).toLocaleString('en-IN')}**\n` +
           `* **Total Statutory Deductions:** **₹${Number(r.totalDeductions || 0).toLocaleString('en-IN')}** (EPF + PT + TDS)\n` +
           `* **Total Net Disbursement:** **₹${Number(r.totalNetPay || 0).toLocaleString('en-IN')}**\n\n` +
@@ -303,7 +303,7 @@ export default function AiCopilot() {
       id: String(Date.now()),
       sender: 'copilot',
       text: `I understand you're asking about: "${prompt}".\n\nHere are some of the actions I can perform for you right now:\n\n` +
-        `• **Audit Anomalies:** Scan all 200 payroll records for negative pay, missing IFSC/PAN, or 0 attendance.\n` +
+        `• **Audit Anomalies:** Scan payroll records for negative pay, missing IFSC/PAN, or 0 attendance.\n` +
         `• **Payroll Summary:** Get total payout, gross earnings, and statutory deductions.\n` +
         `• **Department Breakdown:** View payroll costs for Engineering, Sales, Finance, HR, or Operations.\n` +
         `• **Employee Lookup:** Search by code (e.g. \`EMP-001\`) or name.\n` +

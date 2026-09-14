@@ -61,7 +61,7 @@ public class AuthService {
         user = userRepository.save(user);
 
         String token = jwtUtil.generateToken(user.getId(), company.getId(), user.getRole().name(), user.getEmail());
-        return new AuthResponse(token, user.getRole().name(), company.getId());
+        return new AuthResponse(token, user.getRole().name(), company.getId(), company.getName(), user.getEmail());
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -76,8 +76,12 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is disabled");
         }
 
+        String companyName = companyRepository.findById(user.getCompanyId())
+                .map(Company::getName)
+                .orElse("Company Workspace");
+
         String token = jwtUtil.generateToken(user.getId(), user.getCompanyId(), user.getRole().name(), user.getEmail());
-        return new AuthResponse(token, user.getRole().name(), user.getCompanyId());
+        return new AuthResponse(token, user.getRole().name(), user.getCompanyId(), companyName, user.getEmail());
     }
 
     public UserProfileResponse getCurrentUserProfile() {

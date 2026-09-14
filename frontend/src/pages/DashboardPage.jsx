@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { getEmployees, getAllPayrollRuns, getPendingLeaveRequests, getPendingLoans } from '../services/api';
@@ -6,11 +6,12 @@ import EmployeeDashboard from './EmployeeDashboard';
 import Navbar from '../components/Navbar';
 
 function DashboardPage() {
-  const { role, logout } = useAuth();
+  const { role, companyName, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [empCount, setEmpCount] = useState(200);
+  const [empCount, setEmpCount] = useState(0);
+  const [employeesList, setEmployeesList] = useState([]);
   const [latestRun, setLatestRun] = useState(null);
   const [pendingLeavesCount, setPendingLeavesCount] = useState(0);
   const [pendingLoansCount, setPendingLoansCount] = useState(0);
@@ -26,45 +27,65 @@ function DashboardPage() {
     }
 
     if (role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN' || role === 'MANAGER') {
-      getEmployees(0, 1)
+      getEmployees(0, 100)
         .then((data) => {
-          if (data && data.totalElements) setEmpCount(data.totalElements);
+          if (data && typeof data.totalElements === 'number') {
+            setEmpCount(data.totalElements);
+          } else if (data && Array.isArray(data.content)) {
+            setEmpCount(data.content.length);
+          } else {
+            setEmpCount(0);
+          }
+          if (data && Array.isArray(data.content)) {
+            setEmployeesList(data.content);
+          }
         })
-        .catch(() => {});
+        .catch(() => {
+          setEmpCount(0);
+          setEmployeesList([]);
+        });
 
       getAllPayrollRuns()
         .then((runs) => {
           if (runs && runs.length > 0) setLatestRun(runs[0]);
+          else setLatestRun(null);
         })
-        .catch(() => {});
+        .catch(() => setLatestRun(null));
 
       getPendingLeaveRequests()
         .then((leaves) => {
           if (Array.isArray(leaves)) setPendingLeavesCount(leaves.length);
+          else setPendingLeavesCount(0);
         })
         .catch(() => setPendingLeavesCount(0));
 
       getPendingLoans()
         .then((loans) => {
           if (Array.isArray(loans)) setPendingLoansCount(loans.length);
+          else setPendingLoansCount(0);
         })
         .catch(() => setPendingLoansCount(0));
     }
   }, [role, location.search]);
 
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
-
-  // Department Distribution Data
-  const deptData = [
-    { name: 'Engineering', count: 40, budget: '₹44.00 Lakhs', pct: 20, color: 'bg-indigo-600' },
-    { name: 'Finance', count: 40, budget: '₹41.20 Lakhs', pct: 18.7, color: 'bg-blue-600' },
-    { name: 'Sales', count: 40, budget: '₹38.50 Lakhs', pct: 17.5, color: 'bg-emerald-600' },
-    { name: 'Operations', count: 40, budget: '₹35.80 Lakhs', pct: 16.3, color: 'bg-amber-600' },
-    { name: 'Human Resources', count: 40, budget: '₹33.00 Lakhs', pct: 15, color: 'bg-purple-600' },
-  ];
+  // Compute dynamic department distribution from real employees
+  const deptData = useMemo(() => {
+    if (!employeesList || employeesList.length === 0) return [];
+    const groups = {};
+    employeesList.forEach((e) => {
+      const dept = e.department || 'General';
+      if (!groups[dept]) groups[dept] = { count: 0 };
+      groups[dept].count += 1;
+    });
+    const total = employeesList.length;
+    const colors = ['bg-indigo-600', 'bg-blue-600', 'bg-emerald-600', 'bg-amber-600', 'bg-purple-600', 'bg-rose-600'];
+    return Object.entries(groups).map(([name, val], idx) => ({
+      name,
+      count: val.count,
+      pct: total > 0 ? Math.round((val.count / total) * 100) : 0,
+      color: colors[idx % colors.length]
+    }));
+  }, [employeesList]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,24 +94,65 @@ function DashboardPage() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
-        {/* Onboarding Banner (Task 7.2) */}
+        {/* Onboarding Banner */}
         {showOnboarding && (
           <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold uppercase tracking-wider mb-2">
-                🎉 Workspace Ready
+                🎉 Workspace Ready (0 Data)
               </div>
-              <h2 className="text-lg sm:text-xl font-bold">Welcome to your new PayrollPro Workspace!</h2>
+              <h2 className="text-lg sm:text-xl font-bold">
+                Welcome to {companyName || 'your new company workspace'}!
+              </h2>
               <p className="text-xs text-emerald-100 mt-1 max-w-2xl">
-                Default Indian statutory leave types (CL, SL, EL) are auto-configured. Next steps: 1) Add employees, 2) Log monthly attendance, 3) Run batch payroll.
+                Your company profile has been created with all data at zero. Default Indian statutory leave rules (CL, SL, EL) are auto-configured. Next steps: 1) Add employees, 2) Log attendance, 3) Process monthly payroll.
               </p>
             </div>
-            <button
-              onClick={() => setShowOnboarding(false)}
-              className="px-4 py-2 bg-white text-emerald-800 rounded-xl text-xs font-bold hover:bg-emerald-50 transition"
-            >
-              Got it, Dismiss
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/employees"
+                className="px-4 py-2 bg-white text-emerald-800 rounded-xl text-xs font-bold hover:bg-emerald-50 transition shadow-sm whitespace-nowrap"
+              >
+                + Add First Employee
+              </Link>
+              <button
+                onClick={() => setShowOnboarding(false)}
+                className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-semibold transition"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Zero Data Welcome Card for New Companies */}
+        {empCount === 0 && !showOnboarding && (
+          <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-white rounded-2xl p-6 sm:p-8 border-2 border-dashed border-indigo-200 text-center space-y-4 shadow-sm">
+            <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold shadow-md shadow-indigo-200">
+              🏢
+            </div>
+            <div className="max-w-xl mx-auto">
+              <h3 className="text-lg sm:text-xl font-extrabold text-gray-900">
+                {companyName ? `${companyName} Workspace Ready` : 'Company Workspace Ready'} (All Data Zero)
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1.5">
+                Headcount, payroll cycles, and attendance are currently at zero. You can now begin adding your organization's staff, assigning designations, and configuring salary structures.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 pt-2">
+              <Link
+                to="/employees"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition"
+              >
+                + Add First Employee
+              </Link>
+              <Link
+                to="/attendance"
+                className="px-5 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs sm:text-sm transition"
+              >
+                Attendance Console
+              </Link>
+            </div>
           </div>
         )}
 
@@ -122,18 +184,29 @@ function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">Dashboard &amp; Payroll Analytics</h2>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+              {companyName ? `${companyName} Dashboard` : 'Dashboard & Payroll Analytics'}
+            </h2>
             <p className="mt-1 text-xs sm:text-sm text-gray-500">
               Enterprise Overview • Real-time Headcount, Statutory Compliance, and Payout Metrics
             </p>
           </div>
           <div className="flex gap-2">
-            <Link
-              to="/payroll"
-              className="w-full sm:w-auto text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
-            >
-              🚀 Run September Payroll
-            </Link>
+            {empCount === 0 ? (
+              <Link
+                to="/employees"
+                className="w-full sm:w-auto text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
+              >
+                + Add Employees
+              </Link>
+            ) : (
+              <Link
+                to="/payroll"
+                className="w-full sm:w-auto text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
+              >
+                🚀 Run September Payroll
+              </Link>
+            )}
           </div>
         </div>
 
@@ -142,13 +215,19 @@ function DashboardPage() {
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
             <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Headcount</div>
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1.5">{empCount}</div>
-            <div className="text-[11px] sm:text-xs text-green-600 mt-1 font-medium">● 100% In System</div>
+            <div className="text-[11px] sm:text-xs text-gray-500 mt-1 font-medium">
+              {empCount > 0 ? '● 100% In System' : '0 in system • Add employees'}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
             <div className="text-[11px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Employees</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-600 mt-1.5">{empCount}</div>
-            <div className="text-[11px] sm:text-xs text-gray-500 mt-1">Eligible for payroll</div>
+            <div className={`text-2xl sm:text-3xl font-extrabold mt-1.5 ${empCount > 0 ? 'text-indigo-600' : 'text-gray-900'}`}>
+              {empCount}
+            </div>
+            <div className="text-[11px] sm:text-xs text-gray-500 mt-1">
+              {empCount > 0 ? 'Eligible for payroll' : 'None active yet'}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200">
@@ -186,33 +265,49 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Analytics Section: Department Breakdown & Payroll Trends (Task 7.3) */}
+        {/* Analytics Section: Department Breakdown & Payroll Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Department Salary Distribution */}
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-5">
             <div className="flex justify-between items-center border-b pb-4">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Department Salary Distribution</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Headcount allocation and estimated monthly compensation</p>
+                <h3 className="text-base font-bold text-gray-900">Department Headcount Distribution</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Staff allocation across company departments</p>
               </div>
               <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
-                5 Departments
+                {deptData.length} {deptData.length === 1 ? 'Department' : 'Departments'}
               </span>
             </div>
 
-            <div className="space-y-4">
-              {deptData.map((d) => (
-                <div key={d.name} className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-semibold text-gray-800">{d.name} ({d.count} staff)</span>
-                    <span className="font-mono text-gray-600">{d.budget}</span>
+            {deptData.length === 0 ? (
+              <div className="text-center py-12 px-4 text-gray-400 space-y-2">
+                <div className="text-3xl">📊</div>
+                <p className="text-sm font-semibold text-gray-700">No Department Data Yet</p>
+                <p className="text-xs text-gray-400 max-w-sm mx-auto">
+                  Department allocations and headcount bars will appear automatically as you add staff members.
+                </p>
+                <Link
+                  to="/employees"
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                >
+                  + Add Employee to Directory →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {deptData.map((d) => (
+                  <div key={d.name} className="space-y-1.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="font-semibold text-gray-800">{d.name} ({d.count} staff)</span>
+                      <span className="font-mono text-gray-600">{d.pct}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                      <div className={`${d.color} h-full rounded-full transition-all duration-500`} style={{ width: `${d.pct}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                    <div className={`${d.color} h-full rounded-full transition-all duration-500`} style={{ width: `${d.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Monthly Payroll Trend Summary */}
@@ -221,22 +316,28 @@ function DashboardPage() {
               <div className="flex justify-between items-center border-b pb-4">
                 <h3 className="text-base font-bold text-gray-900">Payroll Cycle Summary</h3>
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  latestRun?.status === 'LOCKED' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'
+                  latestRun?.status === 'LOCKED'
+                    ? 'bg-purple-100 text-purple-800'
+                    : latestRun
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-gray-100 text-gray-600'
                 }`}>
-                  {latestRun ? latestRun.status : 'NO RUN'}
+                  {latestRun ? latestRun.status : 'NO RUNS'}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3 text-xs">
                 <div className="p-3 bg-gray-50 rounded-xl space-y-1">
                   <div className="text-gray-500">Pay Cycle</div>
-                  <div className="text-sm font-bold text-gray-900">September 2026</div>
+                  <div className="text-sm font-bold text-gray-900">
+                    {latestRun ? `${latestRun.month}/${latestRun.year}` : 'September 2026'}
+                  </div>
                 </div>
 
                 <div className="p-3 bg-indigo-50/60 rounded-xl space-y-1 border border-indigo-100">
                   <div className="text-indigo-700 font-medium">Total Net Disbursal</div>
                   <div className="text-xl font-extrabold text-indigo-950">
-                    {latestRun ? `₹${parseFloat(latestRun.totalNetPay || 0).toLocaleString('en-IN')}` : '₹2,03,40,666.68'}
+                    {latestRun ? `₹${parseFloat(latestRun.totalNetPay || 0).toLocaleString('en-IN')}` : '₹0.00'}
                   </div>
                 </div>
 
@@ -244,16 +345,22 @@ function DashboardPage() {
                   <div className="p-2.5 bg-gray-50 rounded-lg">
                     <span className="text-gray-500 block">Gross Total:</span>
                     <span className="font-semibold text-gray-800">
-                      {latestRun ? `₹${parseFloat(latestRun.totalGrossPay || 0).toLocaleString('en-IN')}` : '₹2.20 Cr'}
+                      {latestRun ? `₹${parseFloat(latestRun.totalGrossPay || 0).toLocaleString('en-IN')}` : '₹0.00'}
                     </span>
                   </div>
                   <div className="p-2.5 bg-red-50/50 rounded-lg">
                     <span className="text-red-500 block">Deductions:</span>
                     <span className="font-semibold text-red-700">
-                      {latestRun ? `₹${parseFloat(latestRun.totalDeductions || 0).toLocaleString('en-IN')}` : '₹16.76 L'}
+                      {latestRun ? `₹${parseFloat(latestRun.totalDeductions || 0).toLocaleString('en-IN')}` : '₹0.00'}
                     </span>
                   </div>
                 </div>
+
+                {!latestRun && (
+                  <p className="text-[11px] text-gray-400 pt-1">
+                    No payroll cycles processed yet. Add employees and log attendance to run your first batch.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -281,7 +388,9 @@ function DashboardPage() {
                 </svg>
               </div>
               <h4 className="font-bold text-gray-900 group-hover:text-indigo-600 text-sm">Employee Directory</h4>
-              <p className="text-xs text-gray-500 mt-1">200 employees, salary structures, &amp; search</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {empCount} {empCount === 1 ? 'employee' : 'employees'}, salary structures, &amp; search
+              </p>
             </Link>
 
             {/* Attendance Card */}

@@ -192,6 +192,23 @@ function AttendancePage() {
           </div>
         )}
 
+        {employees.length === 0 && !loading && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span className="font-bold">⚠️ No employees registered in this company workspace.</span>
+              <p className="mt-0.5 text-xs text-amber-700">
+                You must add employees to your company directory before logging monthly working days and attendance.
+              </p>
+            </div>
+            <Link
+              to="/employees"
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs whitespace-nowrap text-center"
+            >
+              + Add First Employee →
+            </Link>
+          </div>
+        )}
+
         {/* Summary Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
           <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-sm">
@@ -312,11 +329,15 @@ function AttendancePage() {
                   className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none"
                   required
                 >
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.empCode} — {emp.firstName} {emp.lastName} ({emp.department})
-                    </option>
-                  ))}
+                  {employees.length === 0 ? (
+                    <option value="" disabled>No employees registered yet</option>
+                  ) : (
+                    employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.empCode} — {emp.firstName} {emp.lastName} ({emp.department})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -387,7 +408,7 @@ function AttendancePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingManual}
+                  disabled={savingManual || employees.length === 0}
                   className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {savingManual ? 'Saving...' : 'Save Attendance'}

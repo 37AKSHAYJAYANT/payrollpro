@@ -1,4 +1,5 @@
 import { createContext, useContext, useReducer, useEffect } from 'react';
+import { getCurrentUser } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -46,6 +47,8 @@ function getInitialState() {
       token: stored.token,
       role: stored.role,
       companyId: stored.companyId,
+      companyName: stored.companyName || null,
+      email: stored.email || null,
       isAuthenticated: true,
       initialized: true
     };
@@ -54,6 +57,8 @@ function getInitialState() {
     token: null,
     role: null,
     companyId: null,
+    companyName: null,
+    email: null,
     isAuthenticated: false,
     initialized: true
   };
@@ -66,14 +71,24 @@ function authReducer(state, action) {
         token: action.payload.token,
         role: action.payload.role,
         companyId: action.payload.companyId,
+        companyName: action.payload.companyName || state.companyName || null,
+        email: action.payload.email || state.email || null,
         isAuthenticated: true,
         initialized: true
+      };
+    case 'UPDATE_PROFILE':
+      return {
+        ...state,
+        companyName: action.payload.companyName || state.companyName,
+        email: action.payload.email || state.email
       };
     case 'LOGOUT':
       return {
         token: null,
         role: null,
         companyId: null,
+        companyName: null,
+        email: null,
         isAuthenticated: false,
         initialized: true
       };
@@ -114,11 +129,40 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Fetch full user profile on login or reload to sync companyName and email
+  useEffect(() => {
+    if (state.token && (!state.companyName || !state.email)) {
+      getCurrentUser()
+        .then((profile) => {
+          if (profile) {
+            dispatch({
+              type: 'UPDATE_PROFILE',
+              payload: {
+                companyName: profile.companyName,
+                email: profile.email
+              }
+            });
+            const stored = getStoredAuth();
+            if (stored) {
+              stored.companyName = profile.companyName;
+              stored.email = profile.email;
+              try {
+                localStorage.setItem('payrollpro_auth', JSON.stringify(stored));
+              } catch {}
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [state.token, state.companyName, state.email]);
+
   function login(authData) {
     const payload = {
       token: authData.token,
       role: authData.role,
-      companyId: authData.companyId
+      companyId: authData.companyId,
+      companyName: authData.companyName || null,
+      email: authData.email || null
     };
     try {
       localStorage.setItem('payrollpro_auth', JSON.stringify(payload));
@@ -126,6 +170,28 @@ export function AuthProvider({ children }) {
       console.error('Failed to save auth state to localStorage', err);
     }
     dispatch({ type: 'LOGIN', payload });
+
+    // If companyName or email was not in authData, load from /auth/me immediately
+    if (!payload.companyName || !payload.email) {
+      getCurrentUser()
+        .then((profile) => {
+          if (profile) {
+            dispatch({
+              type: 'UPDATE_PROFILE',
+              payload: {
+                companyName: profile.companyName,
+                email: profile.email
+              }
+            });
+            payload.companyName = profile.companyName;
+            payload.email = profile.email;
+            try {
+              localStorage.setItem('payrollpro_auth', JSON.stringify(payload));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
   }
 
   function logout() {

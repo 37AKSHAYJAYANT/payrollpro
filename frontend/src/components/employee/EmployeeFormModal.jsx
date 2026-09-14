@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 
 const DEPARTMENTS = ['Engineering', 'Finance', 'HR', 'Marketing', 'Operations', 'Sales'];
-const STATUSES = ['ACTIVE', 'PROBATION', 'NOTICE_PERIOD', 'EXITED'];
+const STATUSES = ['ACTIVE', 'ON_LEAVE', 'EXITED'];
 
 const DEFAULT_FORM_DATA = {
   firstName: '',
@@ -12,7 +12,7 @@ const DEFAULT_FORM_DATA = {
   department: 'Engineering',
   designation: '',
   status: 'ACTIVE',
-  dateOfJoining: '',
+  dateOfJoining: new Date().toISOString().split('T')[0],
   dateOfBirth: '',
   panNumber: '',
   bankName: 'HDFC Bank',
@@ -65,7 +65,22 @@ export default function EmployeeFormModal({
     setError('');
     setSaving(true);
     try {
-      await onSave(formData);
+      const sanitized = {
+        firstName: formData.firstName ? formData.firstName.trim() : '',
+        lastName: formData.lastName ? formData.lastName.trim() : '',
+        email: formData.email ? formData.email.trim() : '',
+        phone: formData.phone?.trim() ? formData.phone.trim() : null,
+        department: formData.department,
+        designation: formData.designation?.trim() ? formData.designation.trim() : null,
+        status: formData.status || 'ACTIVE',
+        dateOfJoining: formData.dateOfJoining,
+        dateOfBirth: formData.dateOfBirth?.trim() ? formData.dateOfBirth.trim() : null,
+        panNumber: formData.panNumber?.trim() ? formData.panNumber.trim().toUpperCase() : null,
+        bankName: formData.bankName?.trim() ? formData.bankName.trim() : null,
+        bankAccountNumber: formData.bankAccountNumber?.trim() ? formData.bankAccountNumber.trim() : null,
+        ifscCode: formData.ifscCode?.trim() ? formData.ifscCode.trim().toUpperCase() : null
+      };
+      await onSave(sanitized);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to save employee');
@@ -150,10 +165,10 @@ export default function EmployeeFormModal({
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Designation *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Designation</label>
             <input
               type="text"
-              required
+              placeholder="e.g. Software Engineer"
               value={formData.designation}
               onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"

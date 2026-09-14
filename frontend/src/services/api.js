@@ -29,7 +29,11 @@ async function apiRequest(endpoint, options = {}) {
     let errorMessage = `API error: ${response.status}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
+      if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+        errorMessage = errorData.errors.map((e) => e.defaultMessage || e.message).filter(Boolean).join(', ') || errorMessage;
+      } else {
+        errorMessage = errorData.message || errorData.detail || errorData.error || errorMessage;
+      }
     } catch {
       // response wasn't JSON
     }
@@ -106,17 +110,35 @@ export async function getEmployeeById(id) {
   return apiRequest(`/api/employees/${id}`);
 }
 
+function sanitizeEmployeeData(employeeData) {
+  if (!employeeData || typeof employeeData !== 'object') return employeeData;
+  const sanitized = { ...employeeData };
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      sanitized[key] = trimmed === '' ? null : trimmed;
+    }
+  }
+  if (sanitized.panNumber && typeof sanitized.panNumber === 'string') {
+    sanitized.panNumber = sanitized.panNumber.toUpperCase();
+  }
+  if (sanitized.ifscCode && typeof sanitized.ifscCode === 'string') {
+    sanitized.ifscCode = sanitized.ifscCode.toUpperCase();
+  }
+  return sanitized;
+}
+
 export async function createEmployee(employeeData) {
   return apiRequest('/api/employees', {
     method: 'POST',
-    body: JSON.stringify(employeeData)
+    body: JSON.stringify(sanitizeEmployeeData(employeeData))
   });
 }
 
 export async function updateEmployee(id, employeeData) {
   return apiRequest(`/api/employees/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(employeeData)
+    body: JSON.stringify(sanitizeEmployeeData(employeeData))
   });
 }
 

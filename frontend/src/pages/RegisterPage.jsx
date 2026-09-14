@@ -11,19 +11,8 @@ function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, isAuthenticated, role } = useAuth();
+  const { login, logout, isAuthenticated, role, companyName: currentCompanyName, email: currentEmail } = useAuth();
   const navigate = useNavigate();
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      if (role === 'EMPLOYEE') {
-        navigate('/employee/dashboard', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
-    }
-  }, [isAuthenticated, role, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -68,7 +57,37 @@ function RegisterPage() {
 
         {/* Card */}
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 p-5 sm:p-8 space-y-5 sm:space-y-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-800">Register New Company</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Register New Company</h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Fresh 0-Data Workspace
+            </span>
+          </div>
+
+          <p className="text-xs text-gray-500">
+            Creates a brand new company profile with zero employees, leaves, and payroll records so you can configure your own organization from scratch.
+          </p>
+
+          {isAuthenticated && (
+            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold">Active Session:</span> {currentEmail || role}
+                  {currentCompanyName && <span className="text-gray-500"> ({currentCompanyName})</span>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="px-2 py-0.5 text-[11px] font-bold text-indigo-700 bg-white border border-indigo-200 rounded hover:bg-indigo-100"
+                >
+                  Sign Out
+                </button>
+              </div>
+              <p className="text-[11px] text-indigo-700">
+                Registering below will switch your session to your new company workspace.
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">

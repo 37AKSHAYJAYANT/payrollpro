@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { submitLeaveRequest } from '../services/api';
 
 function LeaveRequestForm({ leaveTypes, onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
-    leaveTypeId: leaveTypes.length > 0 ? leaveTypes[0].id : '',
+    leaveTypeId: leaveTypes && leaveTypes.length > 0 ? leaveTypes[0].id : '',
     fromDate: new Date().toISOString().split('T')[0],
     toDate: new Date().toISOString().split('T')[0],
     isHalfDay: false,
     reason: ''
   });
+
+  useEffect(() => {
+    if (leaveTypes && leaveTypes.length > 0 && !formData.leaveTypeId) {
+      setFormData((prev) => ({ ...prev, leaveTypeId: leaveTypes[0].id }));
+    }
+  }, [leaveTypes]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
