@@ -107,9 +107,9 @@ public class PayrollService {
         }
 
         Map<Long, SalaryStructure> salaryMap = salaryStructureRepository.findAllByCompanyId(companyId).stream()
-                .collect(Collectors.toMap(SalaryStructure::getEmployeeId, s -> s));
+                .collect(Collectors.toMap(SalaryStructure::getEmployeeId, s -> s, (s1, s2) -> s2));
         Map<Long, Attendance> attendanceMap = attendanceRepository.findAllByCompanyIdAndYearAndMonth(companyId, year, month).stream()
-                .collect(Collectors.toMap(Attendance::getEmployeeId, a -> a));
+                .collect(Collectors.toMap(Attendance::getEmployeeId, a -> a, (a1, a2) -> a2));
         Map<Long, List<com.payrollpro.model.VariablePayRecord>> varPayMap = variablePayRecordRepository
                 .findAllByCompanyIdAndYearAndMonth(companyId, year, month).stream()
                 .collect(Collectors.groupingBy(com.payrollpro.model.VariablePayRecord::getEmployeeId));
@@ -155,6 +155,8 @@ public class PayrollService {
             }
             payrollRecordRepository.deleteAllByCompanyIdAndPayrollRunId(companyId, run.getId());
             loanRepaymentRepository.deleteAllByCompanyIdAndPayrollRunId(companyId, run.getId());
+            payrollRecordRepository.flush();
+            loanRepaymentRepository.flush();
             return run;
         }
 

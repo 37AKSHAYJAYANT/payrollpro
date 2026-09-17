@@ -58,4 +58,19 @@ class RoleAccessSecurityTest {
                         .header("Authorization", "Bearer " + employeeToken))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("Company Admin Execute Payroll Run and Re-run")
+    void testCompanyAdminExecutePayrollRun() throws Exception {
+        String hrToken = jwtUtil.generateToken(2L, 1L, "COMPANY_ADMIN", "hr@democompany.com");
+
+        mockMvc.perform(post("/api/payroll/run?month=9&year=2026")
+                        .header("Authorization", "Bearer " + hrToken))
+                .andExpect(status().isCreated());
+
+        // Re-run the same month & year to verify re-run logic
+        mockMvc.perform(post("/api/payroll/run?month=9&year=2026")
+                        .header("Authorization", "Bearer " + hrToken))
+                .andExpect(status().isCreated());
+    }
 }

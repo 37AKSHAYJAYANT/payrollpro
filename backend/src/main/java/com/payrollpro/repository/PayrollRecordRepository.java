@@ -19,5 +19,7 @@ public interface PayrollRecordRepository extends JpaRepository<PayrollRecord, Lo
     Optional<PayrollRecord> findByCompanyIdAndEmployeeIdAndYearAndMonth(
             Long companyId, Long employeeId, Integer year, Integer month);
 
-    void deleteAllByCompanyIdAndPayrollRunId(Long companyId, Long payrollRunId);
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("DELETE FROM PayrollRecord r WHERE r.companyId = :companyId AND r.payrollRunId = :payrollRunId")
+    void deleteAllByCompanyIdAndPayrollRunId(@org.springframework.data.repository.query.Param("companyId") Long companyId, @org.springframework.data.repository.query.Param("payrollRunId") Long payrollRunId);
 }
