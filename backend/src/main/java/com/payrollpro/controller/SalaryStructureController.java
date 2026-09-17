@@ -6,15 +6,11 @@ import com.payrollpro.service.SalaryStructureService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 @RestController
-@RequestMapping("/api/employees/{id}/salary")
 public class SalaryStructureController {
 
     private final SalaryStructureService salaryStructureService;
@@ -23,17 +19,23 @@ public class SalaryStructureController {
         this.salaryStructureService = salaryStructureService;
     }
 
-    @GetMapping
+    @GetMapping("/api/employees/{id}/salary")
     @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SalaryStructureResponse> getSalaryStructure(@PathVariable Long id) {
         return ResponseEntity.ok(salaryStructureService.getSalaryStructure(id));
     }
 
-    @PostMapping
+    @PostMapping("/api/employees/{id}/salary")
     @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<SalaryStructureResponse> createOrUpdateSalaryStructure(
             @PathVariable Long id,
             @Valid @RequestBody SalaryStructureRequest request) {
         return ResponseEntity.ok(salaryStructureService.createOrUpdateSalaryStructure(id, request));
+    }
+
+    @GetMapping("/api/salary-structures/preview")
+    @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'SUPER_ADMIN', 'MANAGER', 'EMPLOYEE')")
+    public ResponseEntity<SalaryStructureResponse> preview(@RequestParam BigDecimal annualCTC) {
+        return ResponseEntity.ok(salaryStructureService.previewSalaryStructure(annualCTC));
     }
 }

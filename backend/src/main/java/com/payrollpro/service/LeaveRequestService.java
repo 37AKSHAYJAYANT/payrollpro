@@ -69,6 +69,10 @@ public class LeaveRequestService {
         return com.payrollpro.util.SecurityUtils.getCurrentEmployeeWithFallback(userRepository, employeeRepository, companyId);
     }
 
+    private java.util.Optional<Employee> findCurrentEmployee(User user, Long companyId) {
+        return com.payrollpro.util.SecurityUtils.findCurrentEmployeeOptional(userRepository, employeeRepository, companyId);
+    }
+
     @Transactional
     public LeaveRequestResponse submitLeaveRequest(LeaveSubmissionRequest request) {
         Long companyId = getRequiredCompanyId();
