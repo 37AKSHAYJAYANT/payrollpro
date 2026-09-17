@@ -453,8 +453,8 @@ function EmployeeDetailPage() {
                       </div>
                       <input
                         type="number"
-                        step="1000"
-                        min="1"
+                        step="any"
+                        min="0"
                         required
                         value={editCtc}
                         onChange={(e) => setEditCtc(e.target.value)}
