@@ -65,18 +65,8 @@ public class LeaveRequestService {
         return com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
     }
 
-    private java.util.Optional<Employee> findCurrentEmployee(User user, Long companyId) {
-        if (user.getEmployeeId() != null) {
-            return employeeRepository.findByCompanyIdAndId(companyId, user.getEmployeeId());
-        }
-        return employeeRepository.findAllByCompanyId(companyId).stream()
-                .filter(e -> e.getEmail().equalsIgnoreCase(user.getEmail()))
-                .findFirst();
-    }
-
     private Employee getCurrentEmployee(User user, Long companyId) {
-        return findCurrentEmployee(user, companyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No linked employee profile for user " + user.getEmail()));
+        return com.payrollpro.util.SecurityUtils.getCurrentEmployeeWithFallback(userRepository, employeeRepository, companyId);
     }
 
     @Transactional

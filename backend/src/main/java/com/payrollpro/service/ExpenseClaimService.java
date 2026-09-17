@@ -44,24 +44,18 @@ public class ExpenseClaimService {
         return TenantContext.getRequiredCompanyId();
     }
 
-    private Long getAuthenticatedEmployeeId() {
-        User user = com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
-        if (user.getEmployeeId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User account is not linked to an employee record");
+    private Employee resolveClaimEmployee(Long companyId, Long requestEmployeeId) {
+        if (requestEmployeeId != null) {
+            return employeeRepository.findByCompanyIdAndId(companyId, requestEmployeeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
         }
-        return user.getEmployeeId();
+        return com.payrollpro.util.SecurityUtils.getCurrentEmployeeWithFallback(userRepository, employeeRepository, companyId);
     }
 
     @Transactional
     public ExpenseClaimResponse submitClaim(ExpenseClaimRequest request) {
         Long companyId = getRequiredCompanyId();
-        Long employeeId = request.getEmployeeId();
-        if (employeeId == null) {
-            employeeId = getAuthenticatedEmployeeId();
-        }
-
-        Employee employee = employeeRepository.findByCompanyIdAndId(companyId, employeeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
+        Employee employee = resolveClaimEmployee(companyId, request.getEmployeeId());
 
         if (request.getCategory() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Expense category is required");
@@ -90,28 +84,15 @@ public class ExpenseClaimService {
     }
 
     public List<ExpenseClaimResponse> getMyClaims() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
         Long companyId = getRequiredCompanyId();
-        Long employeeId = user.getEmployeeId();
-        if (employeeId == null) {
-            Employee emp = employeeRepository.findAllByCompanyId(companyId).stream()
-                    .filter(e -> e.getEmail().equalsIgnoreCase(user.getEmail()))
-                    .findFirst()
-                    .orElse(null);
-            if (emp == null) {
-                return Collections.emptyList();
-            }
-            employeeId = emp.getId();
+        java.util.Optional<Employee> empOpt = com.payrollpro.util.SecurityUtils.findCurrentEmployeeOptional(
+                userRepository, employeeRepository, companyId);
+        if (empOpt.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        Employee employee = employeeRepository.findByCompanyIdAndId(companyId, employeeId).orElse(null);
-
-        return expenseClaimRepository.findAllByCompanyIdAndEmployeeIdOrderByClaimDateDesc(companyId, employeeId).stream()
+        Employee employee = empOpt.get();
+        return expenseClaimRepository.findAllByCompanyIdAndEmployeeIdOrderByClaimDateDesc(companyId, employee.getId()).stream()
                 .map(claim -> new ExpenseClaimResponse(claim, employee))
                 .collect(Collectors.toList());
     }

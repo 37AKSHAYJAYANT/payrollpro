@@ -68,6 +68,35 @@ export async function apiDownload(endpoint, defaultFilename = 'download') {
   downloadBlob(blob, defaultFilename);
 }
 
+/**
+ * Universal authenticated multipart file upload helper.
+ * Eliminates duplicate FormData handling and error parsing across file uploads.
+ */
+export async function apiUploadFile(endpoint, file) {
+  const token = getAuthToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    let errorMessage = `API error: ${response.status}`;
+    try {
+      const err = await response.json();
+      errorMessage = err.message || err.error || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
 // ---- Auth API ----
 export async function loginApi(email, password) {
   return apiRequest('/api/auth/login', {
@@ -219,28 +248,7 @@ export async function getAttendanceForMonth(month, year) {
 }
 
 export async function uploadAttendanceCsv(file, month, year) {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await fetch(`${API_BASE}/api/attendance/upload-csv?month=${month}&year=${year}`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-
-  if (!response.ok) {
-    let errorMessage = `API error: ${response.status}`;
-    try {
-      const err = await response.json();
-      errorMessage = err.message || err.error || errorMessage;
-    } catch {}
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+  return apiUploadFile(`/api/attendance/upload-csv?month=${month}&year=${year}`, file);
 }
 
 // ---- Payroll API ----
@@ -443,28 +451,7 @@ export async function deleteVariablePayEntry(id) {
 }
 
 export async function uploadVariablePayCsv(file, month, year) {
-  const token = JSON.parse(localStorage.getItem('payrollpro_auth') || '{}').token;
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const response = await fetch(`${API_BASE}/api/payroll/variable-pay/upload-csv?month=${month}&year=${year}`, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    },
-    body: formData
-  });
-
-  if (!response.ok) {
-    let errorMessage = `API error: ${response.status}`;
-    try {
-      const err = await response.json();
-      errorMessage = err.message || err.error || errorMessage;
-    } catch {}
-    throw new Error(errorMessage);
-  }
-
-  return response.json();
+  return apiUploadFile(`/api/payroll/variable-pay/upload-csv?month=${month}&year=${year}`, file);
 }
 
 // ---- Expense Claims API ----

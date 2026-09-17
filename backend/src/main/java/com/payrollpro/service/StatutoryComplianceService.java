@@ -51,14 +51,11 @@ public class StatutoryComplianceService {
      */
     public StatutorySummaryResponse getStatutorySummary(Long payrollRunId) {
         Long companyId = getRequiredCompanyId();
-        PayrollRun run = payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
+        payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll run not found: " + payrollRunId));
 
         List<PayrollRecord> records = payrollRecordRepository.findAllByCompanyIdAndPayrollRunId(companyId, payrollRunId);
-        List<Employee> employees = employeeRepository.findAllByCompanyId(companyId);
-        Map<Long, Employee> employeeMap = employees.stream()
-                .collect(Collectors.toMap(Employee::getId, Function.identity()));
-
+        employeeRepository.findAllByCompanyId(companyId);
         StatutorySummaryResponse summary = new StatutorySummaryResponse();
         summary.setPayrollRunId(payrollRunId);
         summary.setTotalEmployees(records.size());
@@ -78,31 +75,21 @@ public class StatutoryComplianceService {
             BigDecimal basic = rec.getBasicEarned() != null ? rec.getBasicEarned() : BigDecimal.ZERO;
             BigDecimal gross = rec.getGrossEarned() != null ? rec.getGrossEarned() : BigDecimal.ZERO;
 
-            // EPF Computation: eligible if employee basic > 0
             if (basic.compareTo(BigDecimal.ZERO) > 0) {
                 epfCount++;
-                BigDecimal epfWage = basic.min(EPF_WAGE_CEILING);
-                BigDecimal eeShare = rec.getEpfDeduction() != null && rec.getEpfDeduction().compareTo(BigDecimal.ZERO) > 0
-                        ? rec.getEpfDeduction()
-                        : epfWage.multiply(EE_EPF_RATE).setScale(0, RoundingMode.HALF_UP);
-                BigDecimal epsShare = epfWage.multiply(EPS_RATE).setScale(0, RoundingMode.HALF_UP);
-                BigDecimal erShare = eeShare.subtract(epsShare).max(BigDecimal.ZERO);
-
-                totalEpfWages = totalEpfWages.add(epfWage);
-                totalEeEpf = totalEeEpf.add(eeShare);
-                totalEps = totalEps.add(epsShare);
-                totalErEpf = totalErEpf.add(erShare);
+                EpfShare epf = computeEpfShare(basic, rec.getEpfDeduction());
+                totalEpfWages = totalEpfWages.add(epf.getEpfWage());
+                totalEeEpf = totalEeEpf.add(epf.getEeShare());
+                totalEps = totalEps.add(epf.getEpsShare());
+                totalErEpf = totalErEpf.add(epf.getErShare());
             }
 
-            // ESIC Computation: eligible if monthly gross <= 21,000
             if (gross.compareTo(BigDecimal.ZERO) > 0 && gross.compareTo(ESIC_WAGE_CEILING) <= 0) {
                 esicCount++;
-                BigDecimal eeEsic = gross.multiply(EE_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal erEsic = gross.multiply(ER_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
-
+                EsicShare esic = computeEsicShare(gross);
                 totalEsicWages = totalEsicWages.add(gross);
-                totalEeEsic = totalEeEsic.add(eeEsic);
-                totalErEsic = totalErEsic.add(erEsic);
+                totalEeEsic = totalEeEsic.add(esic.getEeShare());
+                totalErEsic = totalErEsic.add(esic.getErShare());
             }
         }
 
@@ -125,7 +112,7 @@ public class StatutoryComplianceService {
      */
     public byte[] generateEpfoEcrText(Long payrollRunId) {
         Long companyId = getRequiredCompanyId();
-        PayrollRun run = payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
+        payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll run not found: " + payrollRunId));
 
         List<PayrollRecord> records = payrollRecordRepository.findAllByCompanyIdAndPayrollRunId(companyId, payrollRunId);
@@ -148,17 +135,7 @@ public class StatutoryComplianceService {
             BigDecimal gross = rec.getGrossEarned() != null ? rec.getGrossEarned() : BigDecimal.ZERO;
             BigDecimal basic = rec.getBasicEarned() != null ? rec.getBasicEarned() : BigDecimal.ZERO;
 
-            BigDecimal epfWages = basic.min(EPF_WAGE_CEILING).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal epsWages = epfWages;
-            BigDecimal edliWages = epfWages;
-
-            BigDecimal eeShare = rec.getEpfDeduction() != null && rec.getEpfDeduction().compareTo(BigDecimal.ZERO) > 0
-                    ? rec.getEpfDeduction().setScale(0, RoundingMode.HALF_UP)
-                    : epfWages.multiply(EE_EPF_RATE).setScale(0, RoundingMode.HALF_UP);
-
-            BigDecimal epsContribution = epsWages.multiply(EPS_RATE).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal erShare = eeShare.subtract(epsContribution).max(BigDecimal.ZERO);
-
+            EpfShare epf = computeEpfShare(basic, rec.getEpfDeduction());
             int workingDays = rec.getTotalWorkingDays() != null ? rec.getTotalWorkingDays() : 30;
             BigDecimal payable = rec.getPayableDays() != null ? rec.getPayableDays() : BigDecimal.valueOf(workingDays);
             int ncpDays = Math.max(0, workingDays - payable.intValue());
@@ -167,12 +144,12 @@ public class StatutoryComplianceService {
             sb.append(uan).append(DELIM)
               .append(memberName).append(DELIM)
               .append(gross.setScale(0, RoundingMode.HALF_UP)).append(DELIM)
-              .append(epfWages).append(DELIM)
-              .append(epsWages).append(DELIM)
-              .append(edliWages).append(DELIM)
-              .append(eeShare).append(DELIM)
-              .append(epsContribution).append(DELIM)
-              .append(erShare).append(DELIM)
+              .append(epf.getEpfWage()).append(DELIM)
+              .append(epf.getEpfWage()).append(DELIM)
+              .append(epf.getEpfWage()).append(DELIM)
+              .append(epf.getEeShare()).append(DELIM)
+              .append(epf.getEpsShare()).append(DELIM)
+              .append(epf.getErShare()).append(DELIM)
               .append(ncpDays).append(DELIM)
               .append("0\n");
         }
@@ -185,7 +162,7 @@ public class StatutoryComplianceService {
      */
     public byte[] generateEsicReturnCsv(Long payrollRunId) {
         Long companyId = getRequiredCompanyId();
-        PayrollRun run = payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
+        payrollRunRepository.findByCompanyIdAndId(companyId, payrollRunId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Payroll run not found: " + payrollRunId));
 
         List<PayrollRecord> records = payrollRecordRepository.findAllByCompanyIdAndPayrollRunId(companyId, payrollRunId);
@@ -202,15 +179,12 @@ public class StatutoryComplianceService {
 
             BigDecimal gross = rec.getGrossEarned() != null ? rec.getGrossEarned() : BigDecimal.ZERO;
 
-            // Only employees with gross <= ₹21,000 are covered by ESIC
             if (gross.compareTo(ESIC_WAGE_CEILING) <= 0 && gross.compareTo(BigDecimal.ZERO) > 0) {
                 String ipNumber = String.format("31%08d", emp.getId());
                 String ipName = "\"" + (emp.getFirstName() + " " + emp.getLastName()).trim() + "\"";
                 BigDecimal workedDays = rec.getPayableDays() != null ? rec.getPayableDays() : BigDecimal.valueOf(30);
 
-                BigDecimal eeEsic = gross.multiply(EE_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal erEsic = gross.multiply(ER_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal totalEsic = eeEsic.add(erEsic);
+                EsicShare esic = computeEsicShare(gross);
 
                 sb.append(ipNumber).append(",")
                   .append(ipName).append(",")
@@ -218,12 +192,64 @@ public class StatutoryComplianceService {
                   .append(gross.setScale(2, RoundingMode.HALF_UP)).append(",")
                   .append("0,")
                   .append(",")
-                  .append(eeEsic).append(",")
-                  .append(erEsic).append(",")
-                  .append(totalEsic).append("\n");
+                  .append(esic.getEeShare()).append(",")
+                  .append(esic.getErShare()).append(",")
+                  .append(esic.getTotalShare()).append("\n");
             }
         }
 
         return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public EpfShare computeEpfShare(BigDecimal basic, BigDecimal recordEeDeduction) {
+        BigDecimal epfWage = basic.min(EPF_WAGE_CEILING).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal eeShare = (recordEeDeduction != null && recordEeDeduction.compareTo(BigDecimal.ZERO) > 0)
+                ? recordEeDeduction.setScale(0, RoundingMode.HALF_UP)
+                : epfWage.multiply(EE_EPF_RATE).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal epsShare = epfWage.multiply(EPS_RATE).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal erShare = eeShare.subtract(epsShare).max(BigDecimal.ZERO);
+        return new EpfShare(epfWage, eeShare, epsShare, erShare);
+    }
+
+    public EsicShare computeEsicShare(BigDecimal gross) {
+        BigDecimal eeEsic = gross.multiply(EE_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal erEsic = gross.multiply(ER_ESIC_RATE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal totalEsic = eeEsic.add(erEsic);
+        return new EsicShare(eeEsic, erEsic, totalEsic);
+    }
+
+    public static class EpfShare {
+        private final BigDecimal epfWage;
+        private final BigDecimal eeShare;
+        private final BigDecimal epsShare;
+        private final BigDecimal erShare;
+
+        public EpfShare(BigDecimal epfWage, BigDecimal eeShare, BigDecimal epsShare, BigDecimal erShare) {
+            this.epfWage = epfWage;
+            this.eeShare = eeShare;
+            this.epsShare = epsShare;
+            this.erShare = erShare;
+        }
+
+        public BigDecimal getEpfWage() { return epfWage; }
+        public BigDecimal getEeShare() { return eeShare; }
+        public BigDecimal getEpsShare() { return epsShare; }
+        public BigDecimal getErShare() { return erShare; }
+    }
+
+    public static class EsicShare {
+        private final BigDecimal eeShare;
+        private final BigDecimal erShare;
+        private final BigDecimal totalShare;
+
+        public EsicShare(BigDecimal eeShare, BigDecimal erShare, BigDecimal totalShare) {
+            this.eeShare = eeShare;
+            this.erShare = erShare;
+            this.totalShare = totalShare;
+        }
+
+        public BigDecimal getEeShare() { return eeShare; }
+        public BigDecimal getErShare() { return erShare; }
+        public BigDecimal getTotalShare() { return totalShare; }
     }
 }

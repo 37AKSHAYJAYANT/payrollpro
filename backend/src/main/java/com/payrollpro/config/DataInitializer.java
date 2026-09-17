@@ -61,21 +61,26 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         log.info("Starting PayrollPro demo data initialization...");
+        Company demoCompany = seedDemoCompany();
+        Long companyId = demoCompany.getId();
+        leaveBalanceService.initializeDefaultLeaveTypes(companyId);
 
-        // 1. Create Demo Company
+        List<Employee> seededEmployees = seedEmployeesAndStructures(companyId);
+        seedLeaveBalances(companyId, seededEmployees);
+        seedDemoUsers(companyId, seededEmployees.get(0));
+    }
+
+    private Company seedDemoCompany() {
         Company demoCompany = new Company();
         demoCompany.setName("Demo Company Inc.");
         demoCompany.setRegistrationNumber("CIN-U72200MH2020PTC123456");
         demoCompany.setAddress("123 Tech Park, BKC, Mumbai, Maharashtra 400051");
         demoCompany.setGstin("27AABCU9603R1ZM");
         demoCompany.setIsActive(true);
-        demoCompany = companyRepository.save(demoCompany);
-        Long companyId = demoCompany.getId();
+        return companyRepository.save(demoCompany);
+    }
 
-        // Auto-create default leave types (CL, SL, EL)
-        leaveBalanceService.initializeDefaultLeaveTypes(companyId);
-
-        // 2. First Names and Last Names pools for generating realistic 200 Indian employees
+    private List<Employee> seedEmployeesAndStructures(Long companyId) {
         String[] firstNames = {
                 "Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Reyansh", "Ayaan", "Krishna", "Ishaan",
                 "Shaurya", "Atharva", "Dhruv", "Kabir", "Rohan", "Ananya", "Diya", "Isha", "Rhea", "Pooja",
@@ -103,7 +108,6 @@ public class DataInitializer implements CommandLineRunner {
         String[] bankNames = {"HDFC Bank", "ICICI Bank", "State Bank of India", "Axis Bank", "Kotak Mahindra Bank"};
         String[] ifscPrefixes = {"HDFC000", "ICIC000", "SBIN000", "UTIB000", "KKBK000"};
 
-        // 3. Seed 200 Employees and Salary Structures
         List<Employee> seededEmployees = new ArrayList<>(200);
         List<SalaryStructure> seededStructures = new ArrayList<>(200);
 
@@ -122,16 +126,7 @@ public class DataInitializer implements CommandLineRunner {
             int deptIdx = (i - 1) % departments.length;
             String dept = departments[deptIdx];
             String desig = designations[deptIdx][(i - 1) % designations[deptIdx].length];
-
-            // Join date spread across the past 3 years
             LocalDate doj = LocalDate.of(2023, 1, 1).plusDays((i * 5) % 1000);
-
-            String panNumber = String.format("ABCDE%04dF", 1000 + i);
-            String aadhaarNumber = String.format("38%010d", 1000000000L + i);
-            int bankIdx = (i - 1) % bankNames.length;
-            String bankName = bankNames[bankIdx];
-            String ifscCode = ifscPrefixes[bankIdx] + String.format("%04d", 100 + bankIdx);
-            String bankAccountNumber = String.format("91%012d", 200000000000L + i);
 
             Employee employee = new Employee();
             employee.setCompanyId(companyId);
@@ -144,42 +139,43 @@ public class DataInitializer implements CommandLineRunner {
             employee.setDesignation(desig);
             employee.setDateOfJoining(doj);
             employee.setDateOfBirth(LocalDate.of(1990 + (i % 12), 1 + (i % 12), 1 + (i % 28)));
-            employee.setPanNumber(panNumber);
-            employee.setAadhaarNumber(aadhaarNumber);
-            employee.setBankName(bankName);
-            employee.setIfscCode(ifscCode);
-            employee.setBankAccountNumber(bankAccountNumber);
+            employee.setPanNumber(String.format("ABCDE%04dF", 1000 + i));
+            employee.setAadhaarNumber(String.format("38%010d", 1000000000L + i));
+            int bankIdx = (i - 1) % bankNames.length;
+            employee.setBankName(bankNames[bankIdx]);
+            employee.setIfscCode(ifscPrefixes[bankIdx] + String.format("%04d", 100 + bankIdx));
+            employee.setBankAccountNumber(String.format("91%012d", 200000000000L + i));
             employee.setStatus(EmployeeStatus.ACTIVE);
 
             employee = employeeRepository.save(employee);
             seededEmployees.add(employee);
 
-            // Calculate SalaryStructure using centralized StatutoryRuleEngine
             long annualCtcValue = ctcMin + ((i % totalCtcSteps) * ctcStep);
             BigDecimal annualCTC = BigDecimal.valueOf(annualCtcValue).setScale(2, RoundingMode.HALF_UP);
             BigDecimal professionalTax = new BigDecimal("200.00");
-            BigDecimal monthlyTds = annualCtcValue > 1000000L ? new BigDecimal("2500.00") : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            BigDecimal monthlyTds = BigDecimal.valueOf(1000 + ((i * 37) % 4000)).setScale(2, RoundingMode.HALF_UP);
 
-            SalaryStructure salaryStructure = statutoryRuleEngine.computeSalaryStructure(
+            SalaryStructure structure = statutoryRuleEngine.computeSalaryStructure(
                     annualCTC, professionalTax, monthlyTds, doj);
-            salaryStructure.setCompanyId(companyId);
-            salaryStructure.setEmployeeId(employee.getId());
-            seededStructures.add(salaryStructure);
+            structure.setCompanyId(companyId);
+            structure.setEmployeeId(employee.getId());
+            seededStructures.add(structure);
         }
 
         salaryStructureRepository.saveAll(seededStructures);
         log.info("200 employees seeded with salary structures.");
+        return seededEmployees;
+    }
 
+    private void seedLeaveBalances(Long companyId, List<Employee> seededEmployees) {
         int currentYear = LocalDate.now().getYear();
         for (Employee emp : seededEmployees) {
             leaveBalanceService.initializeEmployeeBalances(companyId, emp.getId(), currentYear);
         }
         log.info("Leave balances initialized for 200 employees.");
+    }
 
-        // 4. Create 4 Demo Users (as specified in README.md)
-        Employee firstEmployee = seededEmployees.get(0);
-
-        // Super Admin
+    private void seedDemoUsers(Long companyId, Employee firstEmployee) {
         User superAdmin = new User();
         superAdmin.setCompanyId(companyId);
         superAdmin.setEmail("admin@payrollpro.com");
@@ -187,7 +183,6 @@ public class DataInitializer implements CommandLineRunner {
         superAdmin.setRole(Role.SUPER_ADMIN);
         superAdmin.setIsActive(true);
 
-        // Company Admin (HR)
         User companyAdmin = new User();
         companyAdmin.setCompanyId(companyId);
         companyAdmin.setEmail("hr@democompany.com");
@@ -195,7 +190,6 @@ public class DataInitializer implements CommandLineRunner {
         companyAdmin.setRole(Role.COMPANY_ADMIN);
         companyAdmin.setIsActive(true);
 
-        // Manager
         User manager = new User();
         manager.setCompanyId(companyId);
         manager.setEmail("manager@democompany.com");
@@ -203,7 +197,6 @@ public class DataInitializer implements CommandLineRunner {
         manager.setRole(Role.MANAGER);
         manager.setIsActive(true);
 
-        // Employee
         User empUser = new User();
         empUser.setCompanyId(companyId);
         empUser.setEmail("emp001@democompany.com");

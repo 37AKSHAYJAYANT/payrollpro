@@ -29,7 +29,6 @@ async function getAuthToken() {
 
   const data = await response.json();
   cachedToken = data.token;
-  // Cache for 23 hours
   tokenExpiry = Date.now() + 23 * 60 * 60 * 1000;
   return cachedToken;
 }
@@ -50,6 +49,251 @@ async function apiGet(endpoint) {
 
   return response.json();
 }
+
+// ---- Individual Tool Handlers (<30 lines each) ----
+
+async function handleGetPayrollSummary(args) {
+  const month = args?.month || 9;
+  const year = args?.year || 2026;
+
+  const runs = await apiGet("/api/payroll/runs");
+  const matchedRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
+
+  if (!matchedRun) {
+    return { message: `No payroll run found for ${month}/${year}` };
+  }
+
+  return {
+    runId: matchedRun.id,
+    month: matchedRun.month,
+    year: matchedRun.year,
+    status: matchedRun.status,
+    employeeCount: matchedRun.employeeCount,
+    totalGrossPay: matchedRun.totalGrossPay,
+    totalGross: matchedRun.totalGrossPay,
+    totalDeductions: matchedRun.totalDeductions,
+    totalNetPay: matchedRun.totalNetPay,
+  };
+}
+
+async function handleGetEmployeeDetails(args) {
+  const code = (args?.empCode || "").trim().toUpperCase();
+  const page = await apiGet(`/api/employees?size=500&search=${encodeURIComponent(code)}`);
+  const employees = page.content || [];
+  const employee = employees.find((e) => e.empCode.toUpperCase() === code);
+
+  if (!employee) {
+    return { error: `Employee ${code} not found` };
+  }
+
+  let salaryStructure = null;
+  try {
+    salaryStructure = await apiGet(`/api/employees/${employee.id}/salary`);
+  } catch (err) {
+    salaryStructure = { note: "Salary structure not configured yet" };
+  }
+
+  return {
+    empCode: employee.empCode,
+    firstName: employee.firstName,
+    lastName: employee.lastName,
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    department: employee.department,
+    designation: employee.designation,
+    email: employee.email,
+    phone: employee.phone,
+    panNumber: employee.panNumber,
+    bankName: employee.bankName,
+    bankAccountNumber: employee.bankAccountNumber,
+    ifscCode: employee.ifscCode,
+    status: employee.status,
+    dateOfJoining: employee.dateOfJoining,
+    employee,
+    salaryStructure,
+  };
+}
+
+async function handleGetDepartmentSummary(args) {
+  let deptQuery = (args?.department || "").trim().toLowerCase();
+  if (deptQuery === "human resources" || deptQuery === "human-resources") {
+    deptQuery = "hr";
+  }
+  const month = args?.month || 9;
+  const year = args?.year || 2026;
+
+  const runs = await apiGet("/api/payroll/runs");
+  const targetRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
+
+  if (!targetRun) {
+    return { error: `No payroll run found for ${month}/${year}` };
+  }
+
+  const records = await apiGet(`/api/payroll/runs/${targetRun.id}/records`);
+  const deptRecords = records.filter((r) => {
+    if (!r.department) return false;
+    const d = r.department.toLowerCase();
+    return d === deptQuery || d.includes(deptQuery);
+  });
+
+  let totalGross = 0;
+  let totalDeductions = 0;
+  let totalNetPay = 0;
+
+  deptRecords.forEach((r) => {
+    totalGross += Number(r.grossEarned || 0);
+    totalDeductions += Number(r.totalDeductions || 0);
+    totalNetPay += Number(r.netPay || 0);
+  });
+
+  const count = deptRecords.length;
+  const avgNet = count > 0 ? (totalNetPay / count).toFixed(2) : 0;
+
+  return {
+    department: args.department,
+    month,
+    year,
+    runStatus: targetRun.status,
+    employeeCount: count,
+    totalGross: totalGross.toFixed(2),
+    totalDeductions: totalDeductions.toFixed(2),
+    totalNetPay: totalNetPay.toFixed(2),
+    averageNetPay: avgNet,
+    employeesSample: deptRecords.slice(0, 5).map((r) => ({
+      empCode: r.empCode,
+      name: r.employeeName,
+      netPay: r.netPay,
+    })),
+  };
+}
+
+async function handleGetLeaveBalance(args) {
+  const code = (args?.empCode || "").trim().toUpperCase();
+  const year = args?.year || 2026;
+
+  const page = await apiGet(`/api/employees?size=500&search=${encodeURIComponent(code)}`);
+  const employees = page.content || [];
+  const employee = employees.find((e) => e.empCode.toUpperCase() === code);
+
+  if (!employee) {
+    return { error: `Employee ${code} not found` };
+  }
+
+  const balances = await apiGet(`/api/leaves/employee/${employee.id}/balance?year=${year}`);
+
+  return {
+    empCode: employee.empCode,
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    department: employee.department,
+    year,
+    balances,
+  };
+}
+
+function detectRecordAnomalies(r, emp) {
+  const anomalies = [];
+  const net = Number(r.netPay || 0);
+  const gross = Number(r.grossEarned || 0);
+  const payableDays = Number(r.payableDays || 0);
+
+  if (net < 0) {
+    anomalies.push({
+      empCode: r.empCode,
+      employeeName: r.employeeName,
+      issue: `Net pay is negative (-₹${Math.abs(net).toLocaleString("en-IN")})`,
+      severity: "CRITICAL",
+    });
+  }
+
+  if (payableDays === 0) {
+    anomalies.push({
+      empCode: r.empCode,
+      employeeName: r.employeeName,
+      issue: "Zero payable attendance logged — 100% loss of pay",
+      severity: "MEDIUM",
+    });
+  }
+
+  if (emp) {
+    if (!emp.panNumber || emp.panNumber.trim() === "") {
+      anomalies.push({
+        empCode: r.empCode,
+        employeeName: r.employeeName,
+        issue: "Missing PAN number for TDS statutory compliance",
+        severity: "HIGH",
+      });
+    }
+    if (!emp.ifscCode || emp.ifscCode.trim() === "") {
+      anomalies.push({
+        empCode: r.empCode,
+        employeeName: r.employeeName,
+        issue: "Missing bank IFSC code for salary disbursal",
+        severity: "HIGH",
+      });
+    }
+  }
+
+  if (gross > 0 && Number(r.totalDeductions || 0) / gross > 0.5) {
+    anomalies.push({
+      empCode: r.empCode,
+      employeeName: r.employeeName,
+      issue: `High deduction ratio: ${((Number(r.totalDeductions) / gross) * 100).toFixed(1)}% of gross`,
+      severity: "LOW",
+    });
+  }
+
+  return anomalies;
+}
+
+async function handleAuditPayrollAnomalies(args) {
+  const month = args?.month || 9;
+  const year = args?.year || 2026;
+
+  const runs = await apiGet("/api/payroll/runs");
+  const targetRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
+
+  if (!targetRun) {
+    return { error: `No payroll run found for ${month}/${year}` };
+  }
+
+  const records = await apiGet(`/api/payroll/runs/${targetRun.id}/records`);
+  const empPage = await apiGet("/api/employees?size=500");
+  const empMap = new Map((empPage.content || []).map((e) => [e.id, e]));
+
+  const anomalies = [];
+  for (const r of records) {
+    const detected = detectRecordAnomalies(r, empMap.get(r.employeeId));
+    anomalies.push(...detected);
+  }
+
+  const criticalCount = anomalies.filter((a) => a.severity === "CRITICAL").length;
+  const highCount = anomalies.filter((a) => a.severity === "HIGH").length;
+
+  let recommendation = "All records appear compliant and ready for approval.";
+  if (criticalCount > 0) {
+    recommendation = `CRITICAL: Resolve ${criticalCount} negative payout issues immediately prior to manager review.`;
+  } else if (highCount > 0) {
+    recommendation = `ATTENTION: Complete missing statutory PAN/IFSC data for ${highCount} employees before bank transfer.`;
+  }
+
+  return {
+    payCycle: `${month}/${year}`,
+    runId: targetRun.id,
+    runStatus: targetRun.status,
+    totalRecordsAudited: records.length,
+    totalAnomalies: anomalies.length,
+    recommendation,
+    anomalies,
+  };
+}
+
+// Tool Dispatch Map
+const TOOL_HANDLERS = {
+  get_payroll_summary: handleGetPayrollSummary,
+  get_employee_details: handleGetEmployeeDetails,
+  get_department_summary: handleGetDepartmentSummary,
+  get_leave_balance: handleGetLeaveBalance,
+  audit_payroll_anomalies: handleAuditPayrollAnomalies,
+};
 
 // Create MCP Server
 const server = new Server(
@@ -105,24 +349,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "get_leave_balance",
-        description: "Retrieve available and remaining leave balances (Casual Leave, Sick Leave, Earned Leave) for an employee.",
+        description: "Fetch real-time leave quota balance (Casual, Sick, Earned Leave) for an employee.",
         inputSchema: {
           type: "object",
           properties: {
             empCode: { type: "string", description: "Employee code, e.g. EMP-001" },
-            year: { type: "number", description: "Calendar year. Defaults to 2026." },
+            year: { type: "number", description: "Leave calendar year. Defaults to 2026." },
           },
           required: ["empCode"],
         },
       },
       {
         name: "audit_payroll_anomalies",
-        description: "Audit payroll run line items for data anomalies: negative net pay, zero attendance, missing PAN or IFSC, and heavy deductions. Returns structured anomaly report with severity ratings.",
+        description: "Run automated pre-flight audit for payroll runs to detect negative payouts, missing bank IFSC/PAN data, or excessive deductions.",
         inputSchema: {
           type: "object",
           properties: {
-            month: { type: "number", description: "Pay cycle month (1-12). Defaults to 9." },
-            year: { type: "number", description: "Pay cycle year (e.g. 2026). Defaults to 2026." },
+            month: { type: "number", description: "Pay cycle month to audit. Defaults to 9." },
+            year: { type: "number", description: "Pay cycle year to audit. Defaults to 2026." },
           },
         },
       },
@@ -130,291 +374,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
-// Tool Handlers
+// Tool Handler Dispatcher (<20 lines)
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const handler = TOOL_HANDLERS[name];
+
+  if (!handler) {
+    return {
+      isError: true,
+      content: [{ type: "text", text: `Unknown tool: ${name}` }],
+    };
+  }
 
   try {
-    if (name === "get_payroll_summary") {
-      const month = args?.month || 9;
-      const year = args?.year || 2026;
-
-      const runs = await apiGet("/api/payroll/runs");
-      const matchedRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
-
-      if (!matchedRun) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({ message: `No payroll run found for ${month}/${year}` }, null, 2),
-            },
-          ],
-        };
-      }
-
-      const summary = {
-        runId: matchedRun.id,
-        month: matchedRun.month,
-        year: matchedRun.year,
-        status: matchedRun.status,
-        employeeCount: matchedRun.employeeCount,
-        totalGrossPay: matchedRun.totalGrossPay,
-        totalGross: matchedRun.totalGrossPay,
-        totalDeductions: matchedRun.totalDeductions,
-        totalNetPay: matchedRun.totalNetPay,
-      };
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(summary, null, 2) }],
-      };
-    }
-
-    if (name === "get_employee_details") {
-      const code = (args?.empCode || "").trim().toUpperCase();
-      const page = await apiGet(`/api/employees?size=500&search=${encodeURIComponent(code)}`);
-      const employees = page.content || [];
-      const employee = employees.find((e) => e.empCode.toUpperCase() === code);
-
-      if (!employee) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: `Employee ${code} not found` }, null, 2) }],
-        };
-      }
-
-      let salaryStructure = null;
-      try {
-        salaryStructure = await apiGet(`/api/employees/${employee.id}/salary`);
-      } catch (err) {
-        salaryStructure = { note: "Salary structure not configured yet" };
-      }
-
-      const result = {
-        empCode: employee.empCode,
-        firstName: employee.firstName,
-        lastName: employee.lastName,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
-        department: employee.department,
-        designation: employee.designation,
-        email: employee.email,
-        phone: employee.phone,
-        panNumber: employee.panNumber,
-        bankName: employee.bankName,
-        bankAccountNumber: employee.bankAccountNumber,
-        ifscCode: employee.ifscCode,
-        status: employee.status,
-        dateOfJoining: employee.dateOfJoining,
-        employee,
-        salaryStructure,
-      };
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result, null, 2),
-          },
-        ],
-      };
-    }
-
-    if (name === "get_department_summary") {
-      let deptQuery = (args?.department || "").trim().toLowerCase();
-      if (deptQuery === "human resources" || deptQuery === "human-resources") {
-        deptQuery = "hr";
-      }
-      const month = args?.month || 9;
-      const year = args?.year || 2026;
-
-      const runs = await apiGet("/api/payroll/runs");
-      const targetRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
-
-      if (!targetRun) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: `No payroll run found for ${month}/${year}` }, null, 2) }],
-        };
-      }
-
-      const records = await apiGet(`/api/payroll/runs/${targetRun.id}/records`);
-      const deptRecords = records.filter((r) => {
-        if (!r.department) return false;
-        const d = r.department.toLowerCase();
-        return d === deptQuery || d.includes(deptQuery);
-      });
-
-      let totalGross = 0;
-      let totalDeductions = 0;
-      let totalNetPay = 0;
-
-      deptRecords.forEach((r) => {
-        totalGross += Number(r.grossEarned || 0);
-        totalDeductions += Number(r.totalDeductions || 0);
-        totalNetPay += Number(r.netPay || 0);
-      });
-
-      const count = deptRecords.length;
-      const avgNet = count > 0 ? (totalNetPay / count).toFixed(2) : 0;
-
-      const result = {
-        department: args.department,
-        month,
-        year,
-        runStatus: targetRun.status,
-        employeeCount: count,
-        totalGross: totalGross.toFixed(2),
-        totalDeductions: totalDeductions.toFixed(2),
-        totalNetPay: totalNetPay.toFixed(2),
-        averageNetPay: avgNet,
-        employeesSample: deptRecords.slice(0, 5).map((r) => ({
-          empCode: r.empCode,
-          name: r.employeeName,
-          netPay: r.netPay,
-        })),
-      };
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    }
-
-    if (name === "get_leave_balance") {
-      const code = (args?.empCode || "").trim().toUpperCase();
-      const year = args?.year || 2026;
-
-      const page = await apiGet(`/api/employees?size=500&search=${encodeURIComponent(code)}`);
-      const employees = page.content || [];
-      const employee = employees.find((e) => e.empCode.toUpperCase() === code);
-
-      if (!employee) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: `Employee ${code} not found` }, null, 2) }],
-        };
-      }
-
-      const balances = await apiGet(`/api/leaves/employee/${employee.id}/balance?year=${year}`);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                empCode: employee.empCode,
-                employeeName: `${employee.firstName} ${employee.lastName}`,
-                department: employee.department,
-                year,
-                balances,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-
-    if (name === "audit_payroll_anomalies") {
-      const month = args?.month || 9;
-      const year = args?.year || 2026;
-
-      const runs = await apiGet("/api/payroll/runs");
-      const targetRun = runs.find((r) => r.month === month && r.year === year) || runs[0];
-
-      if (!targetRun) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ error: `No payroll run found for ${month}/${year}` }, null, 2) }],
-        };
-      }
-
-      const records = await apiGet(`/api/payroll/runs/${targetRun.id}/records`);
-      const empPage = await apiGet("/api/employees?size=500");
-      const empMap = new Map((empPage.content || []).map((e) => [e.id, e]));
-
-      const anomalies = [];
-
-      for (const r of records) {
-        const net = Number(r.netPay || 0);
-        const gross = Number(r.grossEarned || 0);
-        const payableDays = Number(r.payableDays || 0);
-        const emp = empMap.get(r.employeeId);
-
-        // 1. Negative net pay
-        if (net < 0) {
-          anomalies.push({
-            empCode: r.empCode,
-            employeeName: r.employeeName,
-            issue: `Net pay is negative (-₹${Math.abs(net).toLocaleString('en-IN')})`,
-            severity: "CRITICAL",
-          });
-        }
-
-        // 2. Zero attendance
-        if (payableDays === 0) {
-          anomalies.push({
-            empCode: r.empCode,
-            employeeName: r.employeeName,
-            issue: "Zero payable attendance logged — 100% loss of pay",
-            severity: "MEDIUM",
-          });
-        }
-
-        // 3. Missing PAN or IFSC
-        if (emp) {
-          if (!emp.panNumber || emp.panNumber.trim() === "") {
-            anomalies.push({
-              empCode: r.empCode,
-              employeeName: r.employeeName,
-              issue: "Missing PAN number for TDS statutory compliance",
-              severity: "HIGH",
-            });
-          }
-          if (!emp.ifscCode || emp.ifscCode.trim() === "") {
-            anomalies.push({
-              empCode: r.empCode,
-              employeeName: r.employeeName,
-              issue: "Missing bank IFSC code for salary disbursal",
-              severity: "HIGH",
-            });
-          }
-        }
-
-        // 4. Excessive deductions (> 50% of gross)
-        if (gross > 0 && (Number(r.totalDeductions || 0) / gross) > 0.5) {
-          anomalies.push({
-            empCode: r.empCode,
-            employeeName: r.employeeName,
-            issue: `High deduction ratio: ${( (Number(r.totalDeductions)/gross) * 100 ).toFixed(1)}% of gross`,
-            severity: "LOW",
-          });
-        }
-      }
-
-      const criticalCount = anomalies.filter((a) => a.severity === "CRITICAL").length;
-      const highCount = anomalies.filter((a) => a.severity === "HIGH").length;
-
-      let recommendation = "All records appear compliant and ready for approval.";
-      if (criticalCount > 0) {
-        recommendation = `CRITICAL: Resolve ${criticalCount} negative payout issues immediately prior to manager review.`;
-      } else if (highCount > 0) {
-        recommendation = `ATTENTION: Complete missing statutory PAN/IFSC data for ${highCount} employees before bank transfer.`;
-      }
-
-      const report = {
-        payCycle: `${month}/${year}`,
-        runId: targetRun.id,
-        runStatus: targetRun.status,
-        totalRecordsAudited: records.length,
-        totalAnomalies: anomalies.length,
-        recommendation,
-        anomalies,
-      };
-
-      return {
-        content: [{ type: "text", text: JSON.stringify(report, null, 2) }],
-      };
-    }
-
-    throw new Error(`Unknown tool: ${name}`);
+    const result = await handler(args);
+    return {
+      content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+    };
   } catch (error) {
     return {
       isError: true,

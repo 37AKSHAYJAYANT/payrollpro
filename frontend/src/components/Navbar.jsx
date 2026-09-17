@@ -34,6 +34,7 @@ function Navbar({ currentPage, pendingLeavesCount = 0, pendingLoansCount = 0 }) 
   // Employee nav links
   const employeeLinks = [
     { to: '/dashboard', label: 'Dashboard' },
+    { to: '/employee/payslips', label: 'My Payslips' },
     { to: '/leaves', label: 'My Leaves' },
   ];
 

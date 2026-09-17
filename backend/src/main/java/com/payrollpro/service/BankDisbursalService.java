@@ -128,90 +128,81 @@ public class BankDisbursalService {
         List<PayrollRecord> records = payrollRecordRepository.findAllByCompanyIdAndPayrollRunId(companyId, run.getId());
         Map<Long, Employee> employeeMap = loadEmployeeMap(companyId, records);
 
-        StringBuilder sb = new StringBuilder();
         String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         String periodDesc = String.format("%02d/%d", run.getMonth(), run.getYear());
         String companyDebitAccount = "CORP" + companyId + "9988";
 
-        switch (format) {
-            case HDFC_CMS:
-                // HDFC CMS Pipe-Delimited:
-                // Record Type|Beneficiary Code|Beneficiary Account|Amount|Beneficiary Name|IFSC|Debit Account|Value Date|Email
-                sb.append("Record Type|Beneficiary Code|Beneficiary Account|Amount|Beneficiary Name|IFSC|Debit Account|Value Date|Email\r\n");
-                for (PayrollRecord record : records) {
-                    if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
-                    Employee emp = employeeMap.get(record.getEmployeeId());
-                    if (emp == null) continue;
+        String content = switch (format) {
+            case HDFC_CMS -> buildHdfcCmsFormat(records, employeeMap, companyDebitAccount, dateStr);
+            case ICICI_CIB -> buildIciciCibFormat(records, employeeMap, companyDebitAccount, periodDesc);
+            case GENERIC_NEFT -> buildGenericNeftFormat(records, employeeMap, periodDesc, company.getName());
+        };
 
-                    String empCode = clean(emp.getEmpCode());
-                    String acc = clean(emp.getBankAccountNumber());
-                    String name = clean(emp.getFirstName() + " " + emp.getLastName());
-                    String ifsc = clean(emp.getIfscCode()).toUpperCase();
-                    String email = clean(emp.getEmail());
+        return content.getBytes(StandardCharsets.UTF_8);
+    }
 
-                    sb.append("P|")
-                      .append(empCode).append("|")
-                      .append(acc).append("|")
-                      .append(record.getNetPay().toPlainString()).append("|")
-                      .append(name).append("|")
-                      .append(ifsc).append("|")
-                      .append(companyDebitAccount).append("|")
-                      .append(dateStr).append("|")
-                      .append(email).append("\r\n");
-                }
-                break;
+    private String buildHdfcCmsFormat(List<PayrollRecord> records, Map<Long, Employee> employeeMap,
+                                      String debitAccount, String dateStr) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Record Type|Beneficiary Code|Beneficiary Account|Amount|Beneficiary Name|IFSC|Debit Account|Value Date|Email\r\n");
+        for (PayrollRecord record : records) {
+            if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
+            Employee emp = employeeMap.get(record.getEmployeeId());
+            if (emp == null) continue;
 
-            case ICICI_CIB:
-                // ICICI CIB Format:
-                // Payment Type,Beneficiary Account,Amount,Beneficiary Name,IFSC,Debit Account Number,Remarks
-                sb.append("Payment Type,Beneficiary Account,Amount,Beneficiary Name,IFSC,Debit Account Number,Remarks\r\n");
-                for (PayrollRecord record : records) {
-                    if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
-                    Employee emp = employeeMap.get(record.getEmployeeId());
-                    if (emp == null) continue;
-
-                    String acc = clean(emp.getBankAccountNumber());
-                    String name = clean(emp.getFirstName() + " " + emp.getLastName());
-                    String ifsc = clean(emp.getIfscCode()).toUpperCase();
-                    String remarks = "Salary " + periodDesc;
-
-                    sb.append("NEFT,")
-                      .append(escapeCsv(acc)).append(",")
-                      .append(record.getNetPay().toPlainString()).append(",")
-                      .append(escapeCsv(name)).append(",")
-                      .append(escapeCsv(ifsc)).append(",")
-                      .append(escapeCsv(companyDebitAccount)).append(",")
-                      .append(escapeCsv(remarks)).append("\r\n");
-                }
-                break;
-
-            case GENERIC_NEFT:
-            default:
-                // Generic Standard NEFT/RTGS CSV:
-                // Beneficiary Account Number,Beneficiary Name,IFSC Code,Amount,Payment Reference,Remarks
-                sb.append("Beneficiary Account Number,Beneficiary Name,IFSC Code,Amount,Payment Reference,Remarks\r\n");
-                for (PayrollRecord record : records) {
-                    if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
-                    Employee emp = employeeMap.get(record.getEmployeeId());
-                    if (emp == null) continue;
-
-                    String acc = clean(emp.getBankAccountNumber());
-                    String name = clean(emp.getFirstName() + " " + emp.getLastName());
-                    String ifsc = clean(emp.getIfscCode()).toUpperCase();
-                    String ref = record.getPayslipRef() != null ? record.getPayslipRef() : "SAL-" + record.getId();
-                    String remarks = "Salary for " + periodDesc + " - " + company.getName();
-
-                    sb.append(escapeCsv(acc)).append(",")
-                      .append(escapeCsv(name)).append(",")
-                      .append(escapeCsv(ifsc)).append(",")
-                      .append(record.getNetPay().toPlainString()).append(",")
-                      .append(escapeCsv(ref)).append(",")
-                      .append(escapeCsv(remarks)).append("\r\n");
-                }
-                break;
+            sb.append("P|")
+              .append(clean(emp.getEmpCode())).append("|")
+              .append(clean(emp.getBankAccountNumber())).append("|")
+              .append(record.getNetPay().toPlainString()).append("|")
+              .append(clean(emp.getFirstName() + " " + emp.getLastName())).append("|")
+              .append(clean(emp.getIfscCode()).toUpperCase()).append("|")
+              .append(debitAccount).append("|")
+              .append(dateStr).append("|")
+              .append(clean(emp.getEmail())).append("\r\n");
         }
+        return sb.toString();
+    }
 
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    private String buildIciciCibFormat(List<PayrollRecord> records, Map<Long, Employee> employeeMap,
+                                       String debitAccount, String periodDesc) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Payment Type,Beneficiary Account,Amount,Beneficiary Name,IFSC,Debit Account Number,Remarks\r\n");
+        for (PayrollRecord record : records) {
+            if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
+            Employee emp = employeeMap.get(record.getEmployeeId());
+            if (emp == null) continue;
+
+            sb.append("NEFT,")
+              .append(escapeCsv(clean(emp.getBankAccountNumber()))).append(",")
+              .append(record.getNetPay().toPlainString()).append(",")
+              .append(escapeCsv(clean(emp.getFirstName() + " " + emp.getLastName()))).append(",")
+              .append(escapeCsv(clean(emp.getIfscCode()).toUpperCase())).append(",")
+              .append(escapeCsv(debitAccount)).append(",")
+              .append(escapeCsv("Salary " + periodDesc)).append("\r\n");
+        }
+        return sb.toString();
+    }
+
+    private String buildGenericNeftFormat(List<PayrollRecord> records, Map<Long, Employee> employeeMap,
+                                          String periodDesc, String companyName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Beneficiary Account Number,Beneficiary Name,IFSC Code,Amount,Payment Reference,Remarks\r\n");
+        for (PayrollRecord record : records) {
+            if (record.getNetPay() == null || record.getNetPay().compareTo(BigDecimal.ZERO) <= 0) continue;
+            Employee emp = employeeMap.get(record.getEmployeeId());
+            if (emp == null) continue;
+
+            String ref = record.getPayslipRef() != null ? record.getPayslipRef() : "SAL-" + record.getId();
+            String remarks = "Salary for " + periodDesc + " - " + companyName;
+
+            sb.append(escapeCsv(clean(emp.getBankAccountNumber()))).append(",")
+              .append(escapeCsv(clean(emp.getFirstName() + " " + emp.getLastName()))).append(",")
+              .append(escapeCsv(clean(emp.getIfscCode()).toUpperCase())).append(",")
+              .append(record.getNetPay().toPlainString()).append(",")
+              .append(escapeCsv(ref)).append(",")
+              .append(escapeCsv(remarks)).append("\r\n");
+        }
+        return sb.toString();
     }
 
     private Map<Long, Employee> loadEmployeeMap(Long companyId, List<PayrollRecord> records) {

@@ -6,6 +6,7 @@ import {
   deleteEmployee,
   getSalaryStructure,
   saveSalaryStructure,
+  previewSalaryStructure,
   calculateFnFPreview,
   saveFnFSettlement,
   getFnFSettlementForEmployee,
@@ -15,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import EmployeeFormModal from '../components/employee/EmployeeFormModal';
 import StatusBadge from '../components/common/StatusBadge';
+import { formatCurrency } from '../utils/formatters';
 
 function EmployeeDetailPage() {
   const { id } = useParams();
@@ -54,29 +56,33 @@ function EmployeeDetailPage() {
     setShowEditModal(true);
   }
 
-  // Computed breakdown preview (aligned with backend StatutoryRuleEngine)
-  const previewBreakdown = () => {
+  // Computed breakdown preview backed by backend StatutoryRuleEngine
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
     const ctc = parseFloat(editCtc);
-    if (isNaN(ctc) || ctc <= 0) return null;
-
-    const monthlyGross = ctc / 12;
-    const basic = monthlyGross * 0.5;
-    const hra = basic * 0.4;
-    const special = monthlyGross - basic - hra;
-    const epf = Math.min(basic * 0.12, 1800);
-    const pt = 200;
-    const netTakeHome = monthlyGross - epf - pt;
-
-    return {
-      monthlyGross: monthlyGross.toFixed(2),
-      basic: basic.toFixed(2),
-      hra: hra.toFixed(2),
-      special: special.toFixed(2),
-      epf: epf.toFixed(2),
-      pt: pt.toFixed(2),
-      netTakeHome: netTakeHome.toFixed(2)
-    };
-  };
+    if (isNaN(ctc) || ctc <= 0) {
+      setPreview(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const data = await previewSalaryStructure(ctc);
+        setPreview({
+          monthlyGross: data.monthlyGross,
+          basic: data.basicSalary,
+          hra: data.hra,
+          special: data.specialAllowance,
+          epf: data.epfEmployee,
+          pt: data.professionalTax,
+          netTakeHome: Number(data.monthlyGross) - Number(data.epfEmployee) - Number(data.professionalTax)
+        });
+      } catch {
+        // Keep silent on transient typing
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [editCtc]);
 
   async function loadData() {
     setLoading(true);
@@ -201,8 +207,6 @@ function EmployeeDetailPage() {
     }
   }
 
-  const preview = previewBreakdown();
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -243,15 +247,7 @@ function EmployeeDetailPage() {
                 <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700">
                   {employee.empCode}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium ${
-                  employee.status === 'ACTIVE'
-                    ? 'bg-green-100 text-green-800'
-                    : employee.status === 'ON_LEAVE'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {employee.status}
-                </span>
+                <StatusBadge status={employee.status} />
               </div>
               <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
                 {employee.designation || 'Designation not set'} • {employee.department} • Joined {employee.dateOfJoining}

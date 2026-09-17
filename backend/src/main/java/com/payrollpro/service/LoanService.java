@@ -47,24 +47,13 @@ public class LoanService {
         return TenantContext.getRequiredCompanyId();
     }
 
-    private Long getAuthenticatedEmployeeId() {
-        User user = com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
-        if (user.getEmployeeId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User account is not linked to an employee record");
-        }
-        return user.getEmployeeId();
-    }
-
     @Transactional
     public LoanResponse applyForLoan(LoanApplicationRequest request) {
         Long companyId = getRequiredCompanyId();
-        Long employeeId = request.getEmployeeId();
-        if (employeeId == null) {
-            employeeId = getAuthenticatedEmployeeId();
-        }
-
-        Employee emp = employeeRepository.findByCompanyIdAndId(companyId, employeeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
+        Employee emp = (request.getEmployeeId() != null)
+                ? employeeRepository.findByCompanyIdAndId(companyId, request.getEmployeeId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"))
+                : com.payrollpro.util.SecurityUtils.getCurrentEmployeeWithFallback(userRepository, employeeRepository, companyId);
 
         if (request.getPrincipalAmount() == null || request.getPrincipalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Principal amount must be greater than zero");
@@ -127,25 +116,13 @@ public class LoanService {
     }
 
     public List<LoanResponse> getMyLoans() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        Long companyId = getRequiredCompanyId();
+        java.util.Optional<Employee> empOpt = com.payrollpro.util.SecurityUtils.findCurrentEmployeeOptional(
+                userRepository, employeeRepository, companyId);
+        if (empOpt.isEmpty()) {
+            return Collections.emptyList();
         }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
-        if (user.getEmployeeId() == null) {
-            // Check by email fallback or return empty list
-            Long companyId = getRequiredCompanyId();
-            Employee emp = employeeRepository.findAllByCompanyId(companyId).stream()
-                    .filter(e -> e.getEmail().equalsIgnoreCase(user.getEmail()))
-                    .findFirst()
-                    .orElse(null);
-            if (emp == null) {
-                return Collections.emptyList();
-            }
-            return getLoansForEmployee(emp.getId());
-        }
-        return getLoansForEmployee(user.getEmployeeId());
+        return getLoansForEmployee(empOpt.get().getId());
     }
 
     public List<LoanResponse> getAllLoans() {

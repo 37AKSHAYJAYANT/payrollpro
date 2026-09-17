@@ -6,12 +6,16 @@ import com.payrollpro.dto.EmployeeResponse;
 import com.payrollpro.dto.PageResponse;
 import com.payrollpro.model.Employee;
 import com.payrollpro.model.EmployeeStatus;
+import com.payrollpro.model.Role;
+import com.payrollpro.model.User;
 import com.payrollpro.repository.EmployeeRepository;
+import com.payrollpro.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,11 +29,17 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final LeaveBalanceService leaveBalanceService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public EmployeeService(EmployeeRepository employeeRepository,
-                           LeaveBalanceService leaveBalanceService) {
+                           LeaveBalanceService leaveBalanceService,
+                           UserRepository userRepository,
+                           PasswordEncoder passwordEncoder) {
         this.employeeRepository = employeeRepository;
         this.leaveBalanceService = leaveBalanceService;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private Long getRequiredCompanyId() {
@@ -112,6 +122,18 @@ public class EmployeeService {
         // Auto-create LeaveBalance records for current year
         leaveBalanceService.initializeEmployeeBalances(companyId, employee.getId(), LocalDate.now().getYear());
 
+        // Auto-provision User login account for employee self-service portal
+        if (!userRepository.existsByEmail(employee.getEmail())) {
+            User user = new User();
+            user.setCompanyId(companyId);
+            user.setEmail(employee.getEmail());
+            user.setPasswordHash(passwordEncoder.encode("emp123"));
+            user.setRole(Role.EMPLOYEE);
+            user.setEmployeeId(employee.getId());
+            user.setIsActive(true);
+            userRepository.save(user);
+        }
+
         return new EmployeeResponse(employee);
     }
 
@@ -122,14 +144,25 @@ public class EmployeeService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found"));
 
         // If email is changing, verify no duplicate
-        if (!employee.getEmail().equalsIgnoreCase(request.getEmail()) &&
+        String oldEmail = employee.getEmail();
+        if (!oldEmail.equalsIgnoreCase(request.getEmail()) &&
                 employeeRepository.existsByCompanyIdAndEmail(companyId, request.getEmail())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Employee with email " + request.getEmail() + " already exists");
         }
 
         applyRequestToEmployee(request, employee);
-        employee = employeeRepository.save(employee);
-        return new EmployeeResponse(employee);
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        // Sync User email if email changed
+        String updatedEmail = savedEmployee.getEmail();
+        if (!oldEmail.equalsIgnoreCase(updatedEmail)) {
+            userRepository.findByEmail(oldEmail).ifPresent(u -> {
+                u.setEmail(updatedEmail);
+                userRepository.save(u);
+            });
+        }
+
+        return new EmployeeResponse(savedEmployee);
     }
 
     @Transactional
@@ -142,8 +175,16 @@ public class EmployeeService {
         employee.setStatus(EmployeeStatus.EXITED);
         employee.setDateOfExit(LocalDate.now());
 
-        employee = employeeRepository.save(employee);
-        return new EmployeeResponse(employee);
+        String targetEmail = employee.getEmail();
+        Employee saved = employeeRepository.save(employee);
+
+        // Deactivate associated user login account
+        userRepository.findByEmail(targetEmail).ifPresent(u -> {
+            u.setIsActive(false);
+            userRepository.save(u);
+        });
+
+        return new EmployeeResponse(saved);
     }
 
     private String generateNextEmpCode(Long companyId) {

@@ -1,58 +1,32 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import Navbar from '../components/Navbar';
+import StatusBadge from '../components/common/StatusBadge';
+import LoanApplicationModal from '../components/employee/LoanApplicationModal';
+import ExpenseClaimModal from '../components/employee/ExpenseClaimModal';
+import TaxDeclarationModal from '../components/employee/TaxDeclarationModal';
+import { formatCurrency } from '../utils/formatters';
 import {
   getCurrentUser,
   getMyPayslips,
   downloadPayslipPdf,
   getMyLeaveBalances,
   getMyLoans,
-  applyForLoan,
   getMyTaxDeclaration,
-  submitMyTaxDeclaration,
-  getMyExpenseClaims,
-  submitExpenseClaim
+  getMyExpenseClaims
 } from '../services/api';
 
 function EmployeeDashboard() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
   const [profile, setProfile] = useState(null);
   const [payslips, setPayslips] = useState([]);
   const [balances, setBalances] = useState([]);
   const [loans, setLoans] = useState([]);
   const [expenseClaims, setExpenseClaims] = useState([]);
   const [taxDecl, setTaxDecl] = useState(null);
+
   const [showLoanModal, setShowLoanModal] = useState(false);
-  const [loanForm, setLoanForm] = useState({ principalAmount: '', tenureMonths: 6, reason: '' });
-  const [loanSubmitting, setLoanSubmitting] = useState(false);
-
-  // Expense claim modal state
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({
-    category: 'TRAVEL',
-    amount: '',
-    merchant: '',
-    claimDate: new Date().toISOString().split('T')[0],
-    description: '',
-    receiptUrl: ''
-  });
-  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
-
-  // Tax declaration modal state
   const [showTaxModal, setShowTaxModal] = useState(false);
-  const [taxForm, setTaxForm] = useState({
-    financialYear: '2026-2027',
-    regime: 'NEW_REGIME',
-    section80C: '',
-    section80D: '',
-    section24HomeLoan: '',
-    annualRentPaid: '',
-    isMetro: true,
-    otherExemptions: ''
-  });
-  const [taxSubmitting, setTaxSubmitting] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,16 +55,6 @@ function EmployeeDashboard() {
         setExpenseClaims(expenseData || []);
         if (taxData) {
           setTaxDecl(taxData);
-          setTaxForm({
-            financialYear: taxData.financialYear || '2026-2027',
-            regime: taxData.regime || 'NEW_REGIME',
-            section80C: taxData.section80C != null ? taxData.section80C : '',
-            section80D: taxData.section80D != null ? taxData.section80D : '',
-            section24HomeLoan: taxData.section24HomeLoan != null ? taxData.section24HomeLoan : '',
-            annualRentPaid: taxData.annualRentPaid != null ? taxData.annualRentPaid : '',
-            isMetro: taxData.isMetro !== false,
-            otherExemptions: taxData.otherExemptions != null ? taxData.otherExemptions : ''
-          });
         }
       } catch (err) {
         setError(err.message || 'Failed to load employee dashboard');
@@ -101,11 +65,6 @@ function EmployeeDashboard() {
 
     loadData();
   }, []);
-
-  function handleLogout() {
-    logout();
-    navigate('/login');
-  }
 
   async function handleDownloadPdf(record) {
     try {
@@ -118,89 +77,30 @@ function EmployeeDashboard() {
     }
   }
 
+  function handleLoanSubmitted(newLoan) {
+    setLoans((prev) => [newLoan, ...prev]);
+    setSuccessMsg('Loan application submitted successfully for HR approval!');
+    setTimeout(() => setSuccessMsg(''), 5000);
+  }
+
+  function handleExpenseSubmitted(newClaim) {
+    setExpenseClaims((prev) => [newClaim, ...prev]);
+    setSuccessMsg('Expense claim submitted successfully for manager approval!');
+    setTimeout(() => setSuccessMsg(''), 5000);
+  }
+
+  function handleTaxSubmitted(updatedDecl) {
+    setTaxDecl(updatedDecl);
+    setSuccessMsg('Income Tax Declaration (Form 12BB) submitted successfully!');
+    setTimeout(() => setSuccessMsg(''), 5000);
+  }
+
   const latestPayslip = payslips && payslips.length > 0 ? payslips[0] : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Employee Top Navbar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3 sm:space-x-6">
-              <div className="flex items-center space-x-2">
-                <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm">
-                  P
-                </span>
-                <span className="text-lg sm:text-xl font-bold text-gray-900">PayrollPro</span>
-                <span className="hidden sm:inline text-xs bg-indigo-50 text-indigo-700 font-semibold px-2 py-0.5 rounded-full border border-indigo-200">
-                  Self-Service Portal
-                </span>
-              </div>
-
-              <div className="hidden md:flex items-center space-x-2">
-                <Link
-                  to="/dashboard"
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg text-indigo-700 bg-indigo-50"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/employee/payslips"
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                >
-                  My Payslips
-                </Link>
-                <Link
-                  to="/leaves"
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                >
-                  Leave Management
-                </Link>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-gray-900">
-                  {profile?.fullName || 'Employee'}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {profile?.empCode || ''} • {profile?.department || 'Employee'}
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="text-xs font-semibold px-2.5 sm:px-3 py-1.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Sub-Navigation Bar */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-2 overflow-x-auto text-xs">
-        <Link
-          to="/dashboard"
-          className="px-3 py-1.5 font-medium rounded-lg text-indigo-700 bg-indigo-50 whitespace-nowrap shrink-0"
-        >
-          Dashboard
-        </Link>
-        <Link
-          to="/employee/payslips"
-          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
-        >
-          My Payslips
-        </Link>
-        <Link
-          to="/leaves"
-          className="px-3 py-1.5 font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 whitespace-nowrap shrink-0"
-        >
-          Leave Management
-        </Link>
-      </div>
+      {/* Shared Navbar */}
+      <Navbar currentPage="Self-Service Portal" />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-5 sm:space-y-6">
@@ -253,7 +153,7 @@ function EmployeeDashboard() {
                 </span>
               </div>
               <div className="text-3xl font-extrabold text-gray-900">
-                {latestPayslip ? `₹${parseFloat(latestPayslip.netPay || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '₹0.00'}
+                {latestPayslip ? formatCurrency(latestPayslip.netPay) : '₹0.00'}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {latestPayslip ? `Period: ${latestPayslip.month}/${latestPayslip.year} • Ref: ${latestPayslip.payslipRef}` : 'No recent payroll run found'}
@@ -261,7 +161,7 @@ function EmployeeDashboard() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
-              <span className="text-gray-500">Gross: ₹{parseFloat(latestPayslip?.grossEarned || 0).toLocaleString('en-IN')}</span>
+              <span className="text-gray-500">Gross: {formatCurrency(latestPayslip?.grossEarned || 0)}</span>
               <Link to="/employee/payslips" className="text-indigo-600 font-semibold hover:underline">
                 View All Payslips →
               </Link>
@@ -420,13 +320,13 @@ function EmployeeDashboard() {
                         {record.payableDays} / {record.totalWorkingDays}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-gray-900">
-                        ₹{parseFloat(record.grossEarned || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(record.grossEarned)}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-red-600">
-                        ₹{parseFloat(record.totalDeductions || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(record.totalDeductions)}
                       </td>
                       <td className="px-6 py-4 text-right font-extrabold text-indigo-700">
-                        ₹{parseFloat(record.netPay || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(record.netPay)}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
@@ -447,6 +347,7 @@ function EmployeeDashboard() {
             </div>
           )}
         </div>
+
         {/* Loans & Salary Advances Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -500,26 +401,19 @@ function EmployeeDashboard() {
                   {loans.map((ln) => (
                     <tr key={ln.id} className="hover:bg-gray-50/80 transition">
                       <td className="px-6 py-4 font-bold text-gray-900">
-                        ₹{parseFloat(ln.principalAmount || 0).toLocaleString('en-IN')}
+                        {formatCurrency(ln.principalAmount)}
                       </td>
                       <td className="px-6 py-4 font-semibold text-indigo-700">
-                        ₹{parseFloat(ln.monthlyEmi || 0).toLocaleString('en-IN')} / mo
+                        {formatCurrency(ln.monthlyEmi)} / mo
                       </td>
                       <td className="px-6 py-4 text-gray-700">
                         {ln.tenureMonths} Months
                       </td>
                       <td className="px-6 py-4 font-semibold text-gray-800">
-                        ₹{parseFloat(ln.remainingPrincipal ?? ln.remainingBalance ?? ln.principalAmount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(ln.remainingPrincipal ?? ln.remainingBalance ?? ln.principalAmount ?? 0)}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          ln.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                          ln.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                          ln.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
-                          'bg-amber-100 text-amber-800'
-                        }`}>
-                          {ln.status}
-                        </span>
+                        <StatusBadge status={ln.status} />
                       </td>
                       <td className="px-6 py-4 text-gray-500 max-w-xs truncate">
                         {ln.reason || 'Personal / Emergency'}
@@ -589,17 +483,10 @@ function EmployeeDashboard() {
                         {claim.merchant || '-'}
                       </td>
                       <td className="px-6 py-4 text-right font-extrabold text-gray-900">
-                        ₹{parseFloat(claim.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(claim.amount)}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                          claim.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
-                          claim.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                          claim.status === 'DISBURSED' ? 'bg-purple-100 text-purple-800' :
-                          'bg-amber-100 text-amber-800'
-                        }`}>
-                          {claim.status}
-                        </span>
+                        <StatusBadge status={claim.status} />
                       </td>
                       <td className="px-6 py-4 text-gray-500 max-w-xs truncate text-xs">
                         {claim.description || '-'}
@@ -612,475 +499,25 @@ function EmployeeDashboard() {
           )}
         </div>
 
-        {/* Loan Application Modal */}
-        {showLoanModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100 animate-in fade-in zoom-in-95">
-              <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Apply for Loan / Salary Advance</h3>
-                  <p className="text-xs text-gray-500">Auto-deducted via upcoming payroll runs</p>
-                </div>
-                <button
-                  onClick={() => setShowLoanModal(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center font-bold text-sm"
-                >
-                  ✕
-                </button>
-              </div>
+        {/* Extracted Modals */}
+        <LoanApplicationModal
+          isOpen={showLoanModal}
+          onClose={() => setShowLoanModal(false)}
+          onLoanSubmitted={handleLoanSubmitted}
+        />
 
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!loanForm.principalAmount || Number(loanForm.principalAmount) <= 0) {
-                    alert('Please enter a valid principal amount.');
-                    return;
-                  }
-                  try {
-                    setLoanSubmitting(true);
-                    const res = await applyForLoan({
-                      principalAmount: parseFloat(loanForm.principalAmount),
-                      tenureMonths: parseInt(loanForm.tenureMonths, 10),
-                      reason: loanForm.reason
-                    });
-                    setLoans([res, ...loans]);
-                    setShowLoanModal(false);
-                    setLoanForm({ principalAmount: '', tenureMonths: 6, reason: '' });
-                    setSuccessMsg('Loan application submitted successfully for HR approval!');
-                  } catch (err) {
-                    alert(err.message || 'Failed to submit loan application');
-                  } finally {
-                    setLoanSubmitting(false);
-                  }
-                }}
-                className="space-y-4 text-xs"
-              >
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">
-                    Requested Amount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1000"
-                    step="500"
-                    placeholder="e.g. 50000"
-                    value={loanForm.principalAmount}
-                    onChange={(e) => setLoanForm({ ...loanForm, principalAmount: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold"
-                  />
-                </div>
+        <ExpenseClaimModal
+          isOpen={showExpenseModal}
+          onClose={() => setShowExpenseModal(false)}
+          onExpenseSubmitted={handleExpenseSubmitted}
+        />
 
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">
-                    Repayment Tenure (Months)
-                  </label>
-                  <select
-                    value={loanForm.tenureMonths}
-                    onChange={(e) => setLoanForm({ ...loanForm, tenureMonths: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  >
-                    <option value="1">1 Month (Next Payroll)</option>
-                    <option value="3">3 Months</option>
-                    <option value="6">6 Months</option>
-                    <option value="12">12 Months (1 Year)</option>
-                    <option value="24">24 Months (2 Years)</option>
-                  </select>
-                </div>
-
-                {loanForm.principalAmount && Number(loanForm.principalAmount) > 0 && (
-                  <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl">
-                    <div className="flex justify-between items-center text-indigo-900 font-bold">
-                      <span>Estimated Monthly EMI:</span>
-                      <span className="text-base text-indigo-700">
-                        ₹{(Number(loanForm.principalAmount) / Number(loanForm.tenureMonths || 1)).toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-indigo-600 mt-1">
-                      Zero percent interest (company advance policy). Deducted automatically every pay period.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">
-                    Purpose / Reason
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Reason for advance or loan request..."
-                    value={loanForm.reason}
-                    onChange={(e) => setLoanForm({ ...loanForm, reason: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-xs"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowLoanModal(false)}
-                    className="w-1/2 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loanSubmitting}
-                    className="w-1/2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition disabled:opacity-50 shadow"
-                  >
-                    {loanSubmitting ? 'Submitting...' : 'Submit Request'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Expense Claim Modal */}
-        {showExpenseModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-gray-100 animate-in fade-in zoom-in-95">
-              <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Submit Expense Claim</h3>
-                  <p className="text-xs text-gray-500">Non-taxable reimbursement processed via payroll</p>
-                </div>
-                <button
-                  onClick={() => setShowExpenseModal(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center font-bold text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!expenseForm.amount || Number(expenseForm.amount) <= 0) {
-                    alert('Please enter a valid expense amount.');
-                    return;
-                  }
-                  try {
-                    setExpenseSubmitting(true);
-                    const res = await submitExpenseClaim({
-                      category: expenseForm.category,
-                      amount: parseFloat(expenseForm.amount),
-                      merchant: expenseForm.merchant,
-                      claimDate: expenseForm.claimDate,
-                      description: expenseForm.description,
-                      receiptUrl: expenseForm.receiptUrl
-                    });
-                    setExpenseClaims([res, ...expenseClaims]);
-                    setShowExpenseModal(false);
-                    setExpenseForm({
-                      category: 'TRAVEL',
-                      amount: '',
-                      merchant: '',
-                      claimDate: new Date().toISOString().split('T')[0],
-                      description: '',
-                      receiptUrl: ''
-                    });
-                    setSuccessMsg('Expense claim submitted successfully for manager approval!');
-                    setTimeout(() => setSuccessMsg(''), 5000);
-                  } catch (err) {
-                    alert(err.message || 'Failed to submit expense claim');
-                  } finally {
-                    setExpenseSubmitting(false);
-                  }
-                }}
-                className="space-y-4 text-xs"
-              >
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={expenseForm.category}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs bg-white"
-                    >
-                      <option value="TRAVEL">Travel / Cab / Flight</option>
-                      <option value="MEALS">Client Meals / Dining</option>
-                      <option value="BROADBAND">Broadband / Internet</option>
-                      <option value="FUEL">Fuel / Petrol</option>
-                      <option value="OTHER">Other Business Expense</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">
-                      Claim Date
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={expenseForm.claimDate}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, claimDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">
-                      Amount (₹)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      step="0.01"
-                      placeholder="e.g. 1500"
-                      value={expenseForm.amount}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-gray-700 mb-1">
-                      Vendor / Merchant
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Uber / Airtel / Cafe"
-                      value={expenseForm.merchant}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, merchant: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">
-                    Description / Business Purpose
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Provide details about the business expense..."
-                    value={expenseForm.description}
-                    onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-1">
-                    Receipt URL / Invoice Reference (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://drive.google.com/..."
-                    value={expenseForm.receiptUrl}
-                    onChange={(e) => setExpenseForm({ ...expenseForm, receiptUrl: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowExpenseModal(false)}
-                    className="w-1/2 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={expenseSubmitting}
-                    className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition disabled:opacity-50 shadow"
-                  >
-                    {expenseSubmitting ? 'Submitting...' : 'Submit Claim'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Form 12BB & Income Tax Regime Modal */}
-        {showTaxModal && (
-          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-gray-100 animate-in fade-in zoom-in-95">
-              <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">Income Tax Declaration (Form 12BB)</h3>
-                  <p className="text-xs text-gray-500">Choose tax regime &amp; claim Chapter VI-A statutory deductions</p>
-                </div>
-                <button
-                  onClick={() => setShowTaxModal(false)}
-                  className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center font-bold text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    setTaxSubmitting(true);
-                    const res = await submitMyTaxDeclaration({
-                      financialYear: taxForm.financialYear,
-                      regime: taxForm.regime,
-                      section80C: taxForm.section80C ? parseFloat(taxForm.section80C) : 0,
-                      section80D: taxForm.section80D ? parseFloat(taxForm.section80D) : 0,
-                      section24HomeLoan: taxForm.section24HomeLoan ? parseFloat(taxForm.section24HomeLoan) : 0,
-                      annualRentPaid: taxForm.annualRentPaid ? parseFloat(taxForm.annualRentPaid) : 0,
-                      isMetro: taxForm.isMetro,
-                      otherExemptions: taxForm.otherExemptions ? parseFloat(taxForm.otherExemptions) : 0
-                    });
-                    setTaxDecl(res);
-                    setShowTaxModal(false);
-                    setSuccessMsg('Income Tax Declaration (Form 12BB) submitted successfully!');
-                    setTimeout(() => setSuccessMsg(''), 4000);
-                  } catch (err) {
-                    alert(err.message || 'Failed to submit tax declaration');
-                  } finally {
-                    setTaxSubmitting(false);
-                  }
-                }}
-                className="space-y-4 text-xs"
-              >
-                {/* Tax Regime Selector */}
-                <div>
-                  <label className="block font-semibold text-gray-700 mb-2">Tax Regime</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setTaxForm({ ...taxForm, regime: 'NEW_REGIME' })}
-                      className={`p-3 rounded-xl border text-left transition ${
-                        taxForm.regime === 'NEW_REGIME'
-                          ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="font-bold text-gray-900">New Regime (Sec 115BAC)</div>
-                      <p className="text-[11px] text-gray-500 mt-1">Lower tax slabs, ₹75,000 std deduction, no exemptions</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setTaxForm({ ...taxForm, regime: 'OLD_REGIME' })}
-                      className={`p-3 rounded-xl border text-left transition ${
-                        taxForm.regime === 'OLD_REGIME'
-                          ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="font-bold text-gray-900">Old Regime</div>
-                      <p className="text-[11px] text-gray-500 mt-1">Traditional slabs with 80C, 80D, HRA &amp; Home Loan deductions</p>
-                    </button>
-                  </div>
-                </div>
-
-                {taxForm.regime === 'OLD_REGIME' && (
-                  <div className="space-y-3 pt-2 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">
-                          Section 80C (Max ₹1.5 Lakh)
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="PPF, ELSS, Life Insurance"
-                          value={taxForm.section80C}
-                          onChange={(e) => setTaxForm({ ...taxForm, section80C: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">
-                          Section 80D Mediclaim (Max ₹75K)
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Health insurance premium"
-                          value={taxForm.section80D}
-                          onChange={(e) => setTaxForm({ ...taxForm, section80D: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">
-                          Section 24 Home Loan Interest
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Max ₹2,00,000"
-                          value={taxForm.section24HomeLoan}
-                          onChange={(e) => setTaxForm({ ...taxForm, section24HomeLoan: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-semibold text-gray-700 mb-1">
-                          Annual Rent Paid (for HRA)
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Total rent paid in year"
-                          value={taxForm.annualRentPaid}
-                          onChange={(e) => setTaxForm({ ...taxForm, annualRentPaid: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="checkbox"
-                        id="isMetro"
-                        checked={taxForm.isMetro}
-                        onChange={(e) => setTaxForm({ ...taxForm, isMetro: e.target.checked })}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <label htmlFor="isMetro" className="text-gray-700">
-                        Rented accommodation is in a Metro city (Delhi, Mumbai, Kolkata, Chennai - 50% basic rule)
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {taxDecl?.projectedAnnualTax != null && (
-                  <div className="p-3 bg-indigo-50 rounded-xl flex justify-between items-center text-xs">
-                    <div>
-                      <div className="font-semibold text-indigo-900">Projected Annual Income Tax:</div>
-                      <div className="text-[11px] text-indigo-600">Monthly TDS deduction: ₹{Number(taxDecl.monthlyTds || 0).toFixed(2)}</div>
-                    </div>
-                    <div className="text-base font-extrabold text-indigo-700">
-                      ₹{Number(taxDecl.projectedAnnualTax).toLocaleString('en-IN')}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowTaxModal(false)}
-                    className="w-1/2 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={taxSubmitting}
-                    className="w-1/2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition disabled:opacity-50 shadow"
-                  >
-                    {taxSubmitting ? 'Saving Declaration...' : 'Save & Submit Form 12BB'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <TaxDeclarationModal
+          isOpen={showTaxModal}
+          onClose={() => setShowTaxModal(false)}
+          initialTaxDecl={taxDecl}
+          onTaxSubmitted={handleTaxSubmitted}
+        />
       </main>
     </div>
   );

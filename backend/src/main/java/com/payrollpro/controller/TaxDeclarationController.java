@@ -30,12 +30,7 @@ public class TaxDeclarationController {
     }
 
     private Long getCurrentEmployeeId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
-        }
-        User user = userRepository.findByEmail(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+        User user = com.payrollpro.util.SecurityUtils.getCurrentUser(userRepository);
         if (user.getEmployeeId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not linked to an employee record");
         }
