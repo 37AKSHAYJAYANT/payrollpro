@@ -43,7 +43,7 @@ public class SalaryStructureService {
     }
 
     public SalaryStructureResponse previewSalaryStructure(BigDecimal annualCTC) {
-        SalaryStructure computed = statutoryRuleEngine.computeSalaryStructure(annualCTC, null, null, null);
+        com.payrollpro.dto.StatutoryBreakdown2026 computed = statutoryRuleEngine.computeFullBreakdown(annualCTC, null, null, null);
         return new SalaryStructureResponse(computed);
     }
 

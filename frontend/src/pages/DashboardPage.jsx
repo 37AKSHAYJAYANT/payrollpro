@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { getEmployees, getAllPayrollRuns, getPendingLeaveRequests, getPendingLoans } from '../services/api';
+import { getEmployees, getAllPayrollRuns, getPendingLeaveRequests, getPendingLoans, getPendingExpenseClaims } from '../services/api';
 import EmployeeDashboard from './EmployeeDashboard';
 import Navbar from '../components/Navbar';
 
@@ -15,6 +15,7 @@ function DashboardPage() {
   const [latestRun, setLatestRun] = useState(null);
   const [pendingLeavesCount, setPendingLeavesCount] = useState(0);
   const [pendingLoansCount, setPendingLoansCount] = useState(0);
+  const [pendingExpensesCount, setPendingExpensesCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   if (role === 'EMPLOYEE') {
@@ -27,7 +28,7 @@ function DashboardPage() {
     }
 
     if (role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN' || role === 'MANAGER') {
-      getEmployees(0, 100)
+      getEmployees(0, 1000)
         .then((data) => {
           if (data && typeof data.totalElements === 'number') {
             setEmpCount(data.totalElements);
@@ -65,6 +66,13 @@ function DashboardPage() {
           else setPendingLoansCount(0);
         })
         .catch(() => setPendingLoansCount(0));
+
+      getPendingExpenseClaims()
+        .then((claims) => {
+          if (Array.isArray(claims)) setPendingExpensesCount(claims.length);
+          else setPendingExpensesCount(0);
+        })
+        .catch(() => setPendingExpensesCount(0));
     }
   }, [role, location.search]);
 
@@ -90,10 +98,10 @@ function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top navigation bar */}
-      <Navbar currentPage="Executive Console" pendingLeavesCount={pendingLeavesCount} pendingLoansCount={pendingLoansCount} />
+      <Navbar currentPage="Executive Console" pendingLeavesCount={pendingLeavesCount} pendingLoansCount={pendingLoansCount} pendingExpensesCount={pendingExpensesCount} />
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-28">
         {/* Onboarding Banner */}
         {showOnboarding && (
           <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-2xl p-4 sm:p-6 text-white shadow-lg relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -177,6 +185,31 @@ function DashboardPage() {
               className="px-4 py-2 bg-white text-amber-800 hover:bg-amber-50 font-bold text-xs rounded-xl shadow transition whitespace-nowrap text-center"
             >
               Review Loan Applications →
+            </Link>
+          </div>
+        )}
+
+        {/* Pending Expenses Action Alert Banner */}
+        {pendingExpensesCount > 0 && (
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-4 sm:p-5 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center font-bold text-xl">
+                💳
+              </span>
+              <div>
+                <h3 className="text-sm sm:text-base font-bold">
+                  {pendingExpensesCount} Employee Expense Reimbursement Claim(s) Awaiting Review
+                </h3>
+                <p className="text-xs text-blue-100 mt-0.5">
+                  Business travel, broadband, or meal reimbursement claims have been submitted. Review and approve before monthly payroll.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/expenses/approvals"
+              className="px-4 py-2 bg-white text-blue-800 hover:bg-blue-50 font-bold text-xs rounded-xl shadow transition whitespace-nowrap text-center"
+            >
+              Review Expense Claims →
             </Link>
           </div>
         )}
@@ -335,7 +368,7 @@ function DashboardPage() {
                 </div>
 
                 <div className="p-3 bg-indigo-50/60 rounded-xl space-y-1 border border-indigo-100">
-                  <div className="text-indigo-700 font-medium">Total Net Disbursal</div>
+                  <div className="text-indigo-700 font-medium whitespace-nowrap">Total Net Disbursal</div>
                   <div className="text-xl font-extrabold text-indigo-950">
                     {latestRun ? `₹${parseFloat(latestRun.totalNetPay || 0).toLocaleString('en-IN')}` : '₹0.00'}
                   </div>

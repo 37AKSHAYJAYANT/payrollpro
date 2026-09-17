@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
-import { submitExpenseClaim } from '../../services/api';
+import { submitExpenseClaim, getEmployees } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ExpenseClaimModal({
   isOpen,
   onClose,
   onExpenseSubmitted
 }) {
+  const { role } = useAuth();
+  const isAdmin = role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN' || role === 'MANAGER';
+
+  const [employees, setEmployees] = useState([]);
   const [expenseForm, setExpenseForm] = useState({
+    employeeId: '',
     category: 'TRAVEL',
     amount: '',
     merchant: '',
@@ -16,6 +22,20 @@ export default function ExpenseClaimModal({
     receiptUrl: ''
   });
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && isAdmin) {
+      getEmployees(0, 500)
+        .then((res) => {
+          const list = res.content || [];
+          setEmployees(list);
+          if (list.length > 0 && !expenseForm.employeeId) {
+            setExpenseForm((prev) => ({ ...prev, employeeId: list[0].id }));
+          }
+        })
+        .catch(() => setEmployees([]));
+    }
+  }, [isOpen, isAdmin]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -26,14 +46,18 @@ export default function ExpenseClaimModal({
 
     try {
       setExpenseSubmitting(true);
-      const res = await submitExpenseClaim({
+      const payload = {
         category: expenseForm.category,
         amount: parseFloat(expenseForm.amount),
         merchant: expenseForm.merchant,
         claimDate: expenseForm.claimDate,
         description: expenseForm.description,
         receiptUrl: expenseForm.receiptUrl
-      });
+      };
+      if (isAdmin && expenseForm.employeeId) {
+        payload.employeeId = Number(expenseForm.employeeId);
+      }
+      const res = await submitExpenseClaim(payload);
       onExpenseSubmitted(res);
       setExpenseForm({
         category: 'TRAVEL',
@@ -60,6 +84,26 @@ export default function ExpenseClaimModal({
       maxWidth="max-w-md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        {isAdmin && (
+          <div>
+            <label className="block font-semibold text-gray-700 mb-1">
+              Select Employee <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={expenseForm.employeeId}
+              onChange={(e) => setExpenseForm({ ...expenseForm, employeeId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-xs bg-white font-medium"
+              required
+            >
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.firstName} {emp.lastName} ({emp.empCode}) • {emp.department}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block font-semibold text-gray-700 mb-1">

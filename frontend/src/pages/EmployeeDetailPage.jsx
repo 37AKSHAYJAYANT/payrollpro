@@ -17,6 +17,7 @@ import Navbar from '../components/Navbar';
 import EmployeeFormModal from '../components/employee/EmployeeFormModal';
 import StatusBadge from '../components/common/StatusBadge';
 import { formatCurrency } from '../utils/formatters';
+import { calculateStatutory2026 } from '../utils/statutoryCalculator2026';
 
 function EmployeeDetailPage() {
   const { id } = useParams();
@@ -65,6 +66,29 @@ function EmployeeDetailPage() {
       setPreview(null);
       return;
     }
+
+    // 1. Instant zero-latency client-side calculation using standalone 2026 engine
+    const instant = calculateStatutory2026(ctc);
+    if (instant) {
+      setPreview({
+        monthlyGross: instant.monthlyGross,
+        basic: instant.basicSalary,
+        hra: instant.hra,
+        special: instant.specialAllowance,
+        epf: instant.employeeEpf,
+        employerEps: instant.employerEps,
+        employerEpf: instant.employerEpf,
+        edli: instant.edliEmployer,
+        epfAdmin: instant.epfAdminEmployer,
+        totalEmployerCost: instant.totalEmployerCost,
+        pt: instant.professionalTax,
+        monthlyTds: instant.monthlyTds,
+        annualTds: instant.annualTds,
+        netTakeHome: instant.netTakeHome
+      });
+    }
+
+    // 2. Synchronize with backend API preview
     const timer = setTimeout(async () => {
       try {
         const data = await previewSalaryStructure(ctc);
@@ -74,8 +98,15 @@ function EmployeeDetailPage() {
           hra: data.hra,
           special: data.specialAllowance,
           epf: data.epfEmployee,
+          employerEps: data.employerEps,
+          employerEpf: data.employerEpfShare || data.epfEmployer,
+          edli: data.edliEmployer,
+          epfAdmin: data.epfAdminEmployer,
+          totalEmployerCost: data.totalEmployerCost,
           pt: data.professionalTax,
-          netTakeHome: Number(data.monthlyGross) - Number(data.epfEmployee) - Number(data.professionalTax)
+          monthlyTds: data.monthlyTds,
+          annualTds: data.annualTds,
+          netTakeHome: data.netTakeHome || (Number(data.monthlyGross) - Number(data.epfEmployee) - Number(data.professionalTax) - Number(data.monthlyTds || 0))
         });
       } catch {
         // Keep silent on transient typing
@@ -438,7 +469,7 @@ function EmployeeDetailPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-2">Salary Structure Configuration</h2>
               <p className="text-xs text-gray-500 mb-4">
-                Statutory formulas per specs.md: Basic = 50% Gross, HRA = 40% Basic, EPF = 12% Basic, PT = ₹200.
+                2026 Statutory Rules: Basic = 50% Gross, HRA = 40% Basic, EPFO (EE EPF 12%, ER EPS 8.33%, ER EPF 3.67%, EDLI 0.5%, Admin 0.5%), PT = ₹200, Auto TDS = 2026 New Tax Regime (₹75k Standard Deduction).
               </p>
 
               {(role === 'COMPANY_ADMIN' || role === 'SUPER_ADMIN') ? (
@@ -466,36 +497,84 @@ function EmployeeDetailPage() {
 
                   {/* Auto-preview computed breakdown card */}
                   {preview && (
-                    <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/70 rounded-xl p-4 border border-indigo-100 space-y-2.5">
-                      <div className="text-xs font-semibold text-indigo-900 uppercase tracking-wider mb-2 flex justify-between">
-                        <span>Computed Breakdown Preview</span>
-                        <span className="text-indigo-600">Monthly Gross: ₹{Number(preview.monthlyGross).toLocaleString('en-IN')}</span>
+                    <div className="bg-gradient-to-br from-indigo-50/70 to-blue-50/70 rounded-xl p-4 border border-indigo-100 space-y-3">
+                      <div className="text-xs font-semibold text-indigo-900 uppercase tracking-wider flex justify-between items-center border-b border-indigo-100/80 pb-2">
+                        <span>2026 Statutory &amp; EPFO Breakdown</span>
+                        <span className="text-indigo-700 font-bold">Monthly Gross: ₹{Number(preview.monthlyGross).toLocaleString('en-IN')}</span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white/80 p-2 rounded">
-                          <span className="text-gray-500">Basic (50%):</span>
-                          <div className="font-bold text-gray-800">₹{Number(preview.basic).toLocaleString('en-IN')}</div>
+                      {/* Earnings */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Earnings</span>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white/90 p-2 rounded-lg border border-gray-100">
+                            <span className="text-gray-500 block text-[11px]">Basic (50%)</span>
+                            <span className="font-bold text-gray-900">₹{Number(preview.basic).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-lg border border-gray-100">
+                            <span className="text-gray-500 block text-[11px]">HRA (40%)</span>
+                            <span className="font-bold text-gray-900">₹{Number(preview.hra).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-lg border border-gray-100">
+                            <span className="text-gray-500 block text-[11px]">Special Allow.</span>
+                            <span className="font-bold text-gray-900">₹{Number(preview.special).toLocaleString('en-IN')}</span>
+                          </div>
                         </div>
-                        <div className="bg-white/80 p-2 rounded">
-                          <span className="text-gray-500">HRA (40% Basic):</span>
-                          <div className="font-bold text-gray-800">₹{Number(preview.hra).toLocaleString('en-IN')}</div>
+                      </div>
+
+                      {/* Employee Deductions */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Employee Deductions</span>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white/90 p-2 rounded-lg border border-red-100/60">
+                            <span className="text-gray-500 block text-[11px]">EPF (12% capped)</span>
+                            <span className="font-bold text-red-600">₹{Number(preview.epf).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-lg border border-red-100/60">
+                            <span className="text-gray-500 block text-[11px]">Prof. Tax (PT)</span>
+                            <span className="font-bold text-red-600">₹{preview.pt}</span>
+                          </div>
+                          <div className="bg-white/90 p-2 rounded-lg border border-red-100/60">
+                            <span className="text-gray-500 block text-[11px]">TDS (2026 Regime)</span>
+                            <span className="font-bold text-red-600">₹{Number(preview.monthlyTds || 0).toLocaleString('en-IN')}</span>
+                          </div>
                         </div>
-                        <div className="bg-white/80 p-2 rounded">
-                          <span className="text-gray-500">Special Allowance:</span>
-                          <div className="font-bold text-gray-800">₹{Number(preview.special).toLocaleString('en-IN')}</div>
+                      </div>
+
+                      {/* Employer EPFO 2026 Split */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          <span>Employer EPFO Contributions (2026 Rules)</span>
+                          <span className="text-indigo-600 font-semibold">Total: ₹{Number(preview.totalEmployerCost || 1950).toLocaleString('en-IN')}/mo</span>
                         </div>
-                        <div className="bg-white/80 p-2 rounded">
-                          <span className="text-gray-500">EPF Employee (12%):</span>
-                          <div className="font-bold text-red-600">₹{Number(preview.epf).toLocaleString('en-IN')}</div>
+                        <div className="grid grid-cols-4 gap-1.5 text-[11px]">
+                          <div className="bg-white/80 p-1.5 rounded border border-gray-100 text-center">
+                            <span className="text-gray-400 block text-[9px]">EPS (8.33%)</span>
+                            <span className="font-bold text-gray-800">₹{Number(preview.employerEps || 1250).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/80 p-1.5 rounded border border-gray-100 text-center">
+                            <span className="text-gray-400 block text-[9px]">EPF (3.67%)</span>
+                            <span className="font-bold text-gray-800">₹{Number(preview.employerEpf || 550).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/80 p-1.5 rounded border border-gray-100 text-center">
+                            <span className="text-gray-400 block text-[9px]">EDLI (0.5%)</span>
+                            <span className="font-bold text-gray-800">₹{Number(preview.edli || 75).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="bg-white/80 p-1.5 rounded border border-gray-100 text-center">
+                            <span className="text-gray-400 block text-[9px]">Admin (0.5%)</span>
+                            <span className="font-bold text-gray-800">₹{Number(preview.epfAdmin || 75).toLocaleString('en-IN')}</span>
+                          </div>
                         </div>
-                        <div className="bg-white/80 p-2 rounded">
-                          <span className="text-gray-500">Prof. Tax:</span>
-                          <div className="font-bold text-red-600">₹{preview.pt}</div>
+                      </div>
+
+                      {/* Estimated Net Take Home Highlight */}
+                      <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-3 rounded-xl flex justify-between items-center shadow-xs">
+                        <div>
+                          <span className="text-indigo-200 text-xs font-medium block">Estimated Monthly Take-Home (Net Pay)</span>
+                          <span className="text-[10px] text-indigo-300">Gross - (EPF ₹{preview.epf} + PT ₹{preview.pt} + TDS ₹{Number(preview.monthlyTds || 0).toLocaleString('en-IN')})</span>
                         </div>
-                        <div className="bg-indigo-600 text-white p-2 rounded">
-                          <span className="text-indigo-200">Est. Net Take Home:</span>
-                          <div className="font-bold text-sm">₹{Number(preview.netTakeHome).toLocaleString('en-IN')}</div>
+                        <div className="text-xl font-extrabold">
+                          ₹{Number(preview.netTakeHome).toLocaleString('en-IN')}
                         </div>
                       </div>
                     </div>
@@ -515,13 +594,45 @@ function EmployeeDetailPage() {
                     Annual CTC: ₹{salary ? Number(salary.annualCTC).toLocaleString('en-IN') : 'Not configured'}
                   </div>
                   {salary && (
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div><span className="text-gray-500">Monthly Gross:</span> ₹{salary.monthlyGross}</div>
-                      <div><span className="text-gray-500">Basic Salary:</span> ₹{salary.basicSalary}</div>
-                      <div><span className="text-gray-500">HRA:</span> ₹{salary.hra}</div>
-                      <div><span className="text-gray-500">Special Allowance:</span> ₹{salary.specialAllowance}</div>
-                      <div><span className="text-gray-500">EPF Deduction:</span> ₹{salary.epfEmployee}</div>
-                      <div><span className="text-gray-500">Professional Tax:</span> ₹{salary.professionalTax}</div>
+                    <div className="space-y-2.5 pt-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          <span className="text-gray-500 block">Monthly Gross</span>
+                          <span className="font-bold text-gray-900">₹{Number(salary.monthlyGross).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          <span className="text-gray-500 block">Basic Salary (50%)</span>
+                          <span className="font-bold text-gray-900">₹{Number(salary.basicSalary).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          <span className="text-gray-500 block">HRA (40%)</span>
+                          <span className="font-bold text-gray-900">₹{Number(salary.hra).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                          <span className="text-gray-500 block">Special Allowance</span>
+                          <span className="font-bold text-gray-900">₹{Number(salary.specialAllowance).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-red-50/50 p-2 rounded-lg border border-red-100/60">
+                          <span className="text-red-500 block">Employee EPF (12%)</span>
+                          <span className="font-bold text-red-700">₹{Number(salary.epfEmployee).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-red-50/50 p-2 rounded-lg border border-red-100/60">
+                          <span className="text-red-500 block">Professional Tax</span>
+                          <span className="font-bold text-red-700">₹{salary.professionalTax}</span>
+                        </div>
+                        <div className="bg-red-50/50 p-2 rounded-lg border border-red-100/60">
+                          <span className="text-red-500 block">Monthly TDS (2026)</span>
+                          <span className="font-bold text-red-700">₹{Number(salary.monthlyTds || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-indigo-50 p-2 rounded-lg border border-indigo-100">
+                          <span className="text-indigo-700 block">Employer EPS (8.33%)</span>
+                          <span className="font-bold text-indigo-900">₹{Number(salary.employerEps || 1250).toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                          <span className="text-emerald-700 block font-semibold">Net Take-Home Pay</span>
+                          <span className="font-extrabold text-emerald-900 text-sm">₹{Number(salary.netTakeHome || (Number(salary.monthlyGross) - Number(salary.epfEmployee) - Number(salary.professionalTax) - Number(salary.monthlyTds || 0))).toLocaleString('en-IN')}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

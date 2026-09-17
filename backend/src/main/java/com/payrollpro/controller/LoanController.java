@@ -64,7 +64,10 @@ public class LoanController {
 
     @PutMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('COMPANY_ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<LoanResponse> rejectLoan(@PathVariable Long id) {
-        return ResponseEntity.ok(loanService.rejectLoan(id));
+    public ResponseEntity<LoanResponse> rejectLoan(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String remarks = (body != null) ? body.get("remarks") : null;
+        return ResponseEntity.ok(loanService.rejectLoan(id, remarks));
     }
 }

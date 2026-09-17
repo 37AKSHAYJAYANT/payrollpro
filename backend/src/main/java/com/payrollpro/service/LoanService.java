@@ -96,11 +96,19 @@ public class LoanService {
 
     @Transactional
     public LoanResponse rejectLoan(Long loanId) {
+        return rejectLoan(loanId, null);
+    }
+
+    @Transactional
+    public LoanResponse rejectLoan(Long loanId, String remarks) {
         Long companyId = getRequiredCompanyId();
         LoanRecord loan = loanRecordRepository.findByCompanyIdAndId(companyId, loanId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Loan record not found"));
 
         loan.setStatus(LoanStatus.REJECTED);
+        if (remarks != null && !remarks.trim().isEmpty()) {
+            loan.setRemarks(remarks.trim());
+        }
         LoanRecord saved = loanRecordRepository.save(loan);
 
         Employee emp = employeeRepository.findByCompanyIdAndId(companyId, saved.getEmployeeId()).orElse(null);
@@ -170,6 +178,7 @@ public class LoanService {
         resp.setReason(l.getReason());
         resp.setDisbursedDate(l.getDisbursedDate());
         resp.setCreatedAt(l.getCreatedAt());
+        resp.setRemarks(l.getRemarks());
         return resp;
     }
 }

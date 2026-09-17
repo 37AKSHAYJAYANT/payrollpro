@@ -13,6 +13,7 @@ import PayrollRunPage from './pages/PayrollRunPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import MyPayslipsPage from './pages/MyPayslipsPage';
 import LoanApprovalPage from './pages/LoanApprovalPage';
+import ExpenseApprovalPage from './pages/ExpenseApprovalPage';
 
 function RootRoute() {
   const { isAuthenticated, role, initialized } = useAuth();
@@ -49,6 +50,8 @@ function App() {
           <Route path="/leaves/approvals" element={<LeaveApprovalPage />} />
           <Route path="/loans" element={<LoanApprovalPage />} />
           <Route path="/loans/approvals" element={<LoanApprovalPage />} />
+          <Route path="/expenses" element={<ExpenseApprovalPage />} />
+          <Route path="/expenses/approvals" element={<ExpenseApprovalPage />} />
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/payroll" element={<PayrollRunPage />} />
         </Route>

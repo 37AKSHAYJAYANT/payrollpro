@@ -18,6 +18,7 @@ public class LoanResponse {
     private String reason;
     private LocalDate disbursedDate;
     private LocalDateTime createdAt;
+    private String remarks;
 
     public LoanResponse() {
     }
@@ -116,5 +117,13 @@ public class LoanResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

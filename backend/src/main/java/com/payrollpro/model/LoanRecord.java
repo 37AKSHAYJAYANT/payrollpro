@@ -49,6 +49,9 @@ public class LoanRecord {
     @Column
     private LocalDate disbursedDate;
 
+    @Column(length = 500)
+    private String remarks;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -149,5 +152,13 @@ public class LoanRecord {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getRemarks() {
+        return remarks;
+    }
+
+    public void setRemarks(String remarks) {
+        this.remarks = remarks;
     }
 }

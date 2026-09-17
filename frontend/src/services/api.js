@@ -378,9 +378,10 @@ export async function approveLoan(id) {
   });
 }
 
-export async function rejectLoan(id) {
+export async function rejectLoan(id, remarks = '') {
   return apiRequest(`/api/loans/${id}/reject`, {
-    method: 'PUT'
+    method: 'PUT',
+    body: JSON.stringify({ remarks })
   });
 }
 

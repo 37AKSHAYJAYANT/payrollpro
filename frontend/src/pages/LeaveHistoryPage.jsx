@@ -37,8 +37,12 @@ function LeaveHistoryPage() {
   }
 
   useEffect(() => {
+    if (role && role !== 'EMPLOYEE') {
+      navigate('/leaves/approvals?tab=history', { replace: true });
+      return;
+    }
     loadData();
-  }, []);
+  }, [role, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">

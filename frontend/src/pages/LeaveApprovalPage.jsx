@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getPendingLeaveRequests, getAllLeaveRequests, approveLeave, rejectLeave } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 
 function LeaveApprovalPage() {
-  const [activeTab, setActiveTab] = useState('PENDING'); // 'PENDING' or 'HISTORY'
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get('tab') === 'history' ? 'HISTORY' : 'PENDING';
+  const initialFilter = searchParams.get('status') ? searchParams.get('status').toUpperCase() : 'ALL';
+
+  const [activeTab, setActiveTab] = useState(initialTab); // 'PENDING' or 'HISTORY'
   const [pendingRequests, setPendingRequests] = useState([]);
   const [allRequests, setAllRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +19,7 @@ function LeaveApprovalPage() {
 
   // Search & Filter state for History tab
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL', 'APPROVED', 'REJECTED', 'PENDING'
+  const [statusFilter, setStatusFilter] = useState(initialFilter); // 'ALL', 'APPROVED', 'REJECTED', 'PENDING'
 
   // Remarks modal state
   const [activeRequest, setActiveRequest] = useState(null);
@@ -123,7 +128,14 @@ function LeaveApprovalPage() {
 
         {/* Metrics Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div
+            onClick={() => { setActiveTab('PENDING'); }}
+            className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center justify-between ${
+              activeTab === 'PENDING'
+                ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-400'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
             <div>
               <p className="text-xs text-gray-500 font-medium">Pending Queue</p>
               <p className="text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
@@ -135,7 +147,14 @@ function LeaveApprovalPage() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div
+            onClick={() => { setActiveTab('HISTORY'); setStatusFilter('APPROVED'); }}
+            className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center justify-between ${
+              activeTab === 'HISTORY' && statusFilter === 'APPROVED'
+                ? 'bg-green-50/80 border-green-300 ring-2 ring-green-400'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
             <div>
               <p className="text-xs text-gray-500 font-medium">Approved Leaves</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{approvedCount}</p>
@@ -147,7 +166,14 @@ function LeaveApprovalPage() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div
+            onClick={() => { setActiveTab('HISTORY'); setStatusFilter('REJECTED'); }}
+            className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center justify-between ${
+              activeTab === 'HISTORY' && statusFilter === 'REJECTED'
+                ? 'bg-red-50/80 border-red-300 ring-2 ring-red-400'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
             <div>
               <p className="text-xs text-gray-500 font-medium">Rejected</p>
               <p className="text-2xl font-bold text-red-600 mt-1">{rejectedCount}</p>
@@ -159,7 +185,14 @@ function LeaveApprovalPage() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div
+            onClick={() => { setActiveTab('HISTORY'); setStatusFilter('ALL'); }}
+            className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center justify-between ${
+              activeTab === 'HISTORY' && statusFilter === 'ALL'
+                ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-400'
+                : 'bg-white border-gray-200 hover:border-gray-300'
+            }`}
+          >
             <div>
               <p className="text-xs text-gray-500 font-medium">Total Requests</p>
               <p className="text-2xl font-bold text-indigo-600 mt-1">{allRequests.length}</p>

@@ -1,5 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { LayoutProvider } from '../context/LayoutContext';
+import AppLayout from './layout/AppLayout';
 import AiCopilot from './AiCopilot';
 
 function ProtectedRoute({ allowedRoles }) {
@@ -36,10 +38,12 @@ function ProtectedRoute({ allowedRoles }) {
   }
 
   return (
-    <>
-      <Outlet />
-      {role !== 'EMPLOYEE' && <AiCopilot />}
-    </>
+    <LayoutProvider>
+      <AppLayout>
+        <Outlet />
+        {role !== 'EMPLOYEE' && <AiCopilot />}
+      </AppLayout>
+    </LayoutProvider>
   );
 }
 
